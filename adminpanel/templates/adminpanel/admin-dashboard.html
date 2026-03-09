@@ -1,0 +1,84 @@
+{% extends "adminpanel/base_admin.html" %}
+
+{% block title %}Dashboard - Flecha Azul{% endblock %}
+{% block page_title %}Panel de Control{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- BIENVENIDA -->
+<div class="dashboard-welcome">
+    <div class="welcome-content">
+        <h1>¡Bienvenido de nuevo, <span id="greetingName">{{ request.user.first_name|default:request.user.username}}</span>!</h1>
+        <div class="current-time">
+            <i class="fas fa-clock"></i> <span id="currentDateTime">Cargando...</span>
+        </div>
+    </div>
+</div>
+
+<!-- ACCIONES RÁPIDAS -->
+<div class="quick-actions">
+    <h3>Acciones Rápidas</h3>
+    <div class="actions-grid">
+        <a href="{% url 'admin_paradas' %}" class="action-btn">
+            <div class="action-icon">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <span>Agregar Nueva Parada</span>
+        </a>
+
+        <a href="{% url 'admin_rutas' %}" class="action-btn">
+            <div class="action-icon">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <span>Agregar Nueva Ruta</span>
+        </a>
+
+        <a href="{% url 'admin_horarios' %}" class="action-btn">
+            <div class="action-icon">
+                <i class="fas fa-edit"></i>
+            </div>
+            <span>Modificar Horarios</span>
+        </a>
+    </div>
+</div>
+
+<!-- TABLA RAÍDA DE ACTIVIDAD RECIENTE  -->
+<div class="admin-table-container">
+    <div class="table-header">
+        <h3>Actividad Reciente</h3>
+        <div class="table-actions">
+            <input type="text" class="table-search" placeholder="Buscar consulta...">
+            <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                <i class="fas fa-filter"></i> Filtrar
+            </button>
+        </div>
+    </div>
+
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Usuario</th>
+                <th>Acción</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+            </tr>
+        </thead>
+        <tbody id="queriesTable">
+            {% for actividad in actividades %}
+            <tr>
+                <td>{{ actividad.id }}</td>
+                <td>{{ actividad.usuario.get_full_name|default:actividad.usuario.username }}</td>
+                <td>{{ actividad.get_accion_display }}</td>
+                <td>{{ actividad.fecha }}</td>
+                <td>{{ actividad.hora|time:"H:i:s" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align:center;">No hay actividad reciente</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

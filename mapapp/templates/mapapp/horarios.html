@@ -1,0 +1,732 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horarios y Tarifas - Flecha Azul</title>
+    <!-- FAVICON -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo.png' %}">
+
+    <!-- FONT AWESOME -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- GOOGLE FONTS -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
+
+    <style>
+        /* ESTILOS ESPECÍFICOS PARA HORARIOS */
+        .schedules-hero {
+            padding: 8rem 0 3rem;
+            background: linear-gradient(rgba(30, 64, 175, 0.9), rgba(30, 64, 175, 0.8));
+            color: white;
+        }
+
+        .filters-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--radio-borde);
+            box-shadow: var(--sombra-suave);
+            margin: 2rem 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: var(--gris-oscuro);
+            font-size: 0.9rem;
+        }
+
+        .filter-select {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--azul-suave);
+            border-radius: var(--radio-borde);
+            background: white;
+            color: var(--gris-oscuro);
+            min-width: 200px;
+            cursor: pointer;
+            transition: var(--transicion);
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--azul-secundario);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: var(--radio-borde);
+            box-shadow: var(--sombra-suave);
+            margin: 2rem 0;
+            background: white;
+        }
+
+        .schedules-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+
+        .schedules-table th {
+            background: linear-gradient(135deg, var(--azul-primario), var(--azul-secundario));
+            color: white;
+            padding: 1.25rem 1.5rem;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        .schedules-table td {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gris-claro);
+            color: var(--gris-medio);
+        }
+
+        .schedules-table tbody tr {
+            transition: var(--transicion);
+        }
+
+        .schedules-table tbody tr:hover {
+            background: var(--azul-suave);
+        }
+
+        .schedules-table tbody tr:nth-child(even) {
+            background: rgba(219, 234, 254, 0.3);
+        }
+
+        .schedules-table tbody tr:nth-child(even):hover {
+            background: var(--azul-suave);
+        }
+
+        .price-tag {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 5px rgba(16, 185, 129, 0.2);
+        }
+
+        .frequency-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: var(--azul-suave);
+            color: var(--azul-primario);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .time-cell {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: var(--azul-primario);
+            background: var(--azul-suave);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .discounts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        .discount-card {
+            background: white;
+            border-radius: var(--radio-borde);
+            padding: 2rem;
+            box-shadow: var(--sombra-suave);
+            transition: var(--transicion);
+            border: 2px solid transparent;
+        }
+
+        .discount-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--sombra-media);
+            border-color: var(--azul-suave);
+        }
+
+        .discount-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .discount-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .discount-icon.student {
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+        }
+
+        .discount-icon.senior {
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+        }
+
+        .discount-icon.child {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+        }
+
+        .discount-percentage {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--azul-primario);
+            margin-right: 0.5rem;
+        }
+
+        .discount-requirements {
+            list-style: none;
+            margin-top: 1rem;
+        }
+
+        .discount-requirements li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--gris-claro);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .discount-requirements li:last-child {
+            border-bottom: none;
+        }
+
+        .discount-requirements li::before {
+            content: '✓';
+            color: var(--acento-verde);
+            font-weight: bold;
+        }
+
+        .update-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: var(--acento-oro);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            box-shadow: var(--sombra-suave);
+        }
+
+        .note-container {
+            background: #fef3c7;
+            border-left: 4px solid var(--acento-oro);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+
+        .note-container h4 {
+            color: #92400e;
+            margin-bottom: 0.5rem;
+        }
+
+        .note-container ul {
+            color: #92400e;
+            list-style-position: inside;
+        }
+
+        .print-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--gris-claro);
+            border: none;
+            border-radius: var(--radio-borde);
+            color: var(--gris-oscuro);
+            cursor: pointer;
+            transition: var(--transicion);
+            font-weight: 500;
+        }
+
+        .print-btn:hover {
+            background: var(--azul-suave);
+            color: var(--azul-primario);
+        }
+
+        @media print {
+
+            .filters-container,
+            .print-btn,
+            .footer,
+            .header {
+                display: none !important;
+            }
+
+            .schedules-table {
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+            }
+
+            .schedules-table th {
+                background: #f0f0f0 !important;
+                color: black !important;
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- HEADER -->
+    <header class="header" id="header">
+        <div class="container">
+            <div class="header-content">
+                <!-- LOGO -->
+                <a href="{% url 'index' %}" class="logo">
+                    <img src="{% static 'images/logo.png' %}" alt="Logo Flecha Azul" class="logo-img">
+                    <span class="logo-text">Flecha Azul</span>
+                </a>
+
+                <!-- NAVEGACIÓN -->
+                <nav class="nav">
+                    <ul class="nav-links">
+                        <li><a href="{% url 'index' %}" class="nav-link">Inicio</a></li>
+                        <li><a href="{% url 'mapa' %}" class="nav-link">Mapa</a></li>
+                        <li><a href="{% url 'horarios' %}" class="nav-link active">Horarios</a></li>
+                        <li><a href="{% url 'zonas' %}" class="nav-link">Zonas</a></li>
+                        <li><a href="{% url 'admin_login' %}" class="btn btn-secondary">Admin</a></li>
+                    </ul>
+                </nav>
+
+                <!-- MENÚ MÓVIL -->
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO HORARIOS -->
+    <section class="schedules-hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 style="color: white;">Horarios y Tarifas</h1>
+                <p class="hero-subtitle" style="color:#ffffff;">
+                    Consulta los horarios actualizados y tarifas para tus viajes con Flecha Azul.
+                </p>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container">
+        <!-- FILTROS -->
+         <div class="filters-container">
+
+    <div class="filter-group">
+        <label class="filter-label">Filtrar por ruta:</label>
+        <select class="filter-select" id="filterRuta">
+            <option value="all">Todas las rutas</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Origen:</label>
+        <select class="filter-select" id="filterOrigen">
+            <option value="all">Todos los orígenes</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Destino:</label>
+        <select class="filter-select" id="filterDestino">
+            <option value="all">Todos los destinos</option>
+        </select>
+    </div>
+
+</div>
+
+        <!-- NOTA IMPORTANTE -->
+        <div class="note-container">
+            <h4><i class="fas fa-exclamation-circle"></i> Información Importante</h4>
+            <ul>
+                <li>Horarios sujetos a cambios por condiciones climáticas o de tráfico</li>
+                <li>Los precios pueden variar en días festivos</li>
+                <li>Se recomienda llegar 10 minutos antes de la hora de salida</li>
+                <li>Última actualización: <strong id="fechaActualizacion"></strong></li>
+            </ul>
+        </div>
+
+        <!-- TABLA DE HORARIOS -->
+        <!-- TABLA DE HORARIOS -->
+        <div class="table-container">
+            <table class="schedules-table" id="schedulesTable">
+                <thead>
+                    <tr>
+                        <th><i class="fas fa-map-marker-alt"></i> Origen</th>
+                        <th><i class="fas fa-map-marker-alt"></i> Destino</th>
+                        <th><i class="fas fa-clock"></i> Primer Viaje</th>
+                        <th><i class="fas fa-clock"></i> Último Viaje</th>
+                        <th><i class="fas fa-sync-alt"></i> Frecuencia</th>
+                        <th><i class="fas fa-tag"></i> Tarifa</th>
+                        <th><i class="fas fa-tags"></i> Descuento</th>
+                        <th><i class="fas fa-route"></i> Ruta</th>
+                    </tr>
+                </thead>
+
+                <tbody id="tableBody">
+                    <tr>
+
+                        <td>{{ h.origen.nombre }}</td>
+
+                        <td>{{ h.destino.nombre }}</td>
+
+                        <td>
+                            <span class="time-cell">
+                                {{ h.primer_viaje }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="time-cell">
+                                {{ h.ultimo_viaje }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="frequency-badge">
+                                {{ h.frecuencia }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="price-tag">
+                                ${{ h.tarifa }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="price-tag" style="background: linear-gradient(135deg,#8b5cf6,#a78bfa);">
+                                ${{ h.descuento }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <i class="fas fa-bus"></i>
+                            {{ h.ruta.nombre }}
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+        </div>
+
+        <!-- DESCUENTOS ESPECIALES -->
+        <div class="section-header">
+            <h2>Descuentos Especiales</h2>
+            <p>Aprovecha nuestras tarifas preferenciales</p>
+        </div>
+
+        <div class="discounts-container">
+            <!-- DESCUENTO ESTUDIANTIL -->
+            <div class="discount-card">
+                <div class="discount-header">
+                    <div class="discount-icon student">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div>
+                        <h3>Descuento Estudiantil</h3>
+                        <p>Para estudiantes con credencial vigente</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: baseline;">
+                    <span class="discount-percentage">25%</span>
+                    <span style="color: var(--gris-medio);">de descuento</span>
+                </div>
+                <ul class="discount-requirements">
+                    <li>Credencial estudiantil vigente</li>
+                    <li>Válido en horario vacacional</li>
+                    <li>Aplicable en todas las rutas</li>
+                    <li>Presentar credencial al conductor</li>
+                </ul>
+            </div>
+
+            <!-- DESCUENTO ADULTOS MAYORES -->
+            <div class="discount-card">
+                <div class="discount-header">
+                    <div class="discount-icon senior">
+                        <i class="fas fa-user-friends"></i>
+                    </div>
+                    <div>
+                        <h3>Adultos Mayores</h3>
+                        <p>Para personas de 60 años o más</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: baseline;">
+                    <span class="discount-percentage">25%</span>
+                    <span style="color: var(--gris-medio);">de descuento</span>
+                </div>
+                <ul class="discount-requirements">
+                    <li>Credencial INAPAM vigente</li>
+                    <li>Válido en cualquier horario</li>
+                    <li>Aplicable en todas las rutas</li>
+                    <li>Presentar credencial al conductor</li>
+                </ul>
+            </div>
+
+            <!-- DESCUENTO NIÑOS -->
+            <div class="discount-card">
+                <div class="discount-header">
+                    <div class="discount-icon child">
+                        <i class="fas fa-child"></i>
+                    </div>
+                    <div>
+                        <h3>Niños</h3>
+                        <p>Para los más pequeños</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: baseline;">
+                    <span class="discount-percentage">100%</span>
+                    <span style="color: var(--gris-medio);">de descuento</span>
+                </div>
+                <ul class="discount-requirements">
+                    <li>Menores de 3 años</li>
+                    <li>Máximo 2 niños por adulto</li>
+                    <li>Aplicable en todas las rutas</li>
+                    <li>Deben viajar con un adulto</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- INFORMACIÓN ADICIONAL -->
+        <div class="note-container" style="background: #dbeafe; border-left-color: var(--azul-secundario);">
+            <h4><i class="fas fa-info-circle"></i> Cómo pagar tu viaje</h4>
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+                <div>
+                    <h5><i class="fas fa-money-bill-wave" style="color: var(--acento-verde);"></i> Efectivo</h5>
+                    <p style="color: var(--gris-medio);">Aceptamos efectivo exacto. Manejamos cambio.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <!-- HORARIOS Y DIRECCIÓN CON ICONOS CENTRADOS -->
+            <div class="footer-center-text"
+                style="display: flex; justify-content: center; align-items: center; gap: 1rem; width: 100%; margin-bottom: 1.5rem; font-size: 1rem; color: rgba(255,255,255,0.8);">
+                <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
+                    <i class="fas fa-clock"></i> Lun - SAB: 5:30 AM - 11:30 PM | DOM: 6:30 AM - 10:30 PM
+                </span>
+                <span class="separator" style="color: rgba(255,255,255,0.8); font-weight: bold;">|</span>
+                <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
+                    <i class="fas fa-map-marker-alt"></i> 72090, Av. 10 Pte. 113, San Miguelito, Heroica Puebla de Zaragoza, Pue.
+                </span>
+            </div>
+
+            <!-- FOOTER BOTTOM -->
+            <div class="footer-bottom">
+                <p>&copy; 2026 Flecha Azul - Todos los derechos reservados. |
+                    <a href="#">Términos y Condiciones</a> |
+                    <a href="#">Política de Privacidad</a>
+                </p>
+                <p class="mt-1" style="font-size: 0.875rem; color: rgba(255,255,255,0.5);">
+                    <i class="fas fa-bus"></i> Viaja seguro, viaja con Flecha Azul
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    {{ horarios_json|json_script:"horarios-data" }}
+
+    <!-- JavaScript -->
+    <script>
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    const horarios = JSON.parse(
+    document.getElementById("horarios-data").textContent
+);
+
+    // Elementos DOM
+    const tableBody = document.getElementById('tableBody');
+
+    const fechaActualizacion = document.getElementById('fechaActualizacion');
+
+    const filterRuta = document.getElementById("filterRuta");
+    const filterOrigen = document.getElementById("filterOrigen");
+    const filterDestino = document.getElementById("filterDestino");
+
+function cargarTabla(datos){
+
+    tableBody.innerHTML = "";
+
+    if(!Array.isArray(datos)) return;
+
+    datos.forEach(h =>{
+
+        tableBody.innerHTML += `
+        <tr>
+            <td>${h.origen__nombre}</td>
+            <td>${h.destino__nombre}</td>
+
+            <td>
+                <span class="time-cell">
+                    ${h.primer_viaje}
+                </span>
+            </td>
+
+            <td>
+                <span class="time-cell">
+                    ${h.ultimo_viaje}
+                </span>
+            </td>
+
+            <td>
+                <span class="frequency-badge">
+                    ${h.frecuencia}
+                </span>
+            </td>
+
+            <td>
+                <span class="price-tag">
+                    $${h.tarifa}
+                </span>
+            </td>
+
+            <td>
+                <span class="price-tag" style="background: linear-gradient(135deg,#8b5cf6,#a78bfa);">
+                    $${h.descuento}
+                </span>
+            </td>
+
+            <td>
+                <i class="fas fa-bus"></i>
+                ${h.ruta__nombre}
+            </td>
+        </tr>
+        `;
+    });
+}
+
+    // ===== FECHAS =====
+    const hoy = new Date();
+    const siguienteMes = new Date();
+    siguienteMes.setMonth(hoy.getMonth() + 1);
+
+    fechaActualizacion.textContent = hoy.toLocaleDateString('es-MX',{
+        year:'numeric',
+        month:'long',
+        day:'numeric'
+    });
+
+    // ===== EVENTOS FILTROS =====
+    [filterRuta, filterOrigen, filterDestino].forEach(select=>{
+        select.addEventListener("change", aplicarFiltros);
+    });
+
+    // ===== HEADER SCROLL =====
+    window.addEventListener('scroll', function () {
+        const header = document.getElementById('header');
+        if (window.scrollY > 50) {
+            header.classList.add('scrolled');
+        } else {
+            header.classList.remove('scrolled');
+        }
+    });
+
+    // ===== FUNCIONES =====
+
+    function cargarFiltros(datos){
+
+    if(!Array.isArray(datos)) return;
+
+    const rutas = [...new Set(datos.map(d => d.ruta__nombre))];
+    const origenes = [...new Set(datos.map(d => d.origen__nombre))];
+    const destinos = [...new Set(datos.map(d => d.destino__nombre))];
+
+    rutas.forEach(r=>{
+        if(r){
+            filterRuta.innerHTML += `<option value="${r}">${r}</option>`;
+        }
+    });
+
+    origenes.forEach(o=>{
+        if(o){
+            filterOrigen.innerHTML += `<option value="${o}">${o}</option>`;
+        }
+    });
+
+    destinos.forEach(d=>{
+        if(d){
+            filterDestino.innerHTML += `<option value="${d}">${d}</option>`;
+        }
+    });
+}
+
+    function aplicarFiltros(){
+
+    let filtrados = [...horarios];
+
+    if(filterRuta.value !== "all"){
+        filtrados = filtrados.filter(h =>
+            h.ruta__nombre === filterRuta.value
+        );
+    }
+
+    if(filterOrigen.value !== "all"){
+        filtrados = filtrados.filter(h =>
+            h.origen__nombre === filterOrigen.value
+        );
+    }
+
+    if(filterDestino.value !== "all"){
+        filtrados = filtrados.filter(h =>
+            h.destino__nombre === filterDestino.value
+        );
+    }
+}
+
+cargarFiltros(horarios);
+cargarTabla(horarios);
+
+});
+
+
+
+</script>
+</body>
+
+</html>

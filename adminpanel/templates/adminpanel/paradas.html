@@ -1,0 +1,215 @@
+{% extends "adminpanel/base_admin.html" %}
+
+{% block title %}Gestión de Paradas - Flecha Azul{% endblock %}
+{% block page_title %}Gestión de Paradas{% endblock %}
+
+{% block content %}
+
+<div class="chart-card">
+    <div class="chart-header">
+        <h3 class="chart-title">Crear Paradas</h3>
+    </div>
+
+    <div style="margin-bottom:1rem">
+        <input type="text" id="nombreParada"
+               placeholder="Nombre de la parada"
+               class="table-search">
+    </div>
+
+    <div id="mapa" style="width:100%; height:500px;"></div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js_scripts %}
+
+{{ paradas|json_script:"paradas-data" }}
+
+<script>
+
+let mapa;
+let marcadorTemporal = null;
+
+/* ===============================
+   INICIALIZAR MAPA
+=============================== */
+
+function inicializarMapa(){
+
+    mapa = new google.maps.Map(
+        document.getElementById("mapa"),
+        {
+            center:{ lat:19.3167, lng:-98.2390 },
+            zoom:15
+        }
+    );
+
+    /* Click para crear parada */
+    mapa.addListener("click", function(e){
+
+        let nombre = document.getElementById("nombreParada").value;
+
+        if(!nombre){
+            alert("Escribe primero el nombre de la parada");
+            return;
+        }
+
+        crearParada(e.latLng.lat(), e.latLng.lng(), nombre);
+
+    });
+
+    cargarParadasExistentes();
+}
+
+/* ===============================
+   CREAR PARADA
+=============================== */
+
+function crearParada(lat,lng,nombre){
+
+    fetch("/admin-panel/crear_parada/",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "X-CSRFToken":getCookie("csrftoken")
+        },
+        body:JSON.stringify({
+            nombre:nombre,
+            lat:lat,
+            lng:lng
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+
+        const marker = new google.maps.Marker({
+            position:{lat:lat,lng:lng},
+            map:mapa,
+            title:nombre
+        });
+
+        const infowindow = new google.maps.InfoWindow({
+            content:`<div>
+                        <strong>${nombre}</strong><br>
+                        <button class="btn btn-danger" onclick="eliminarParada(${data.id}, this)">Eliminar</button>
+                     </div>`
+        });
+
+        marker.addListener("click", function(){
+            infowindow.open(mapa, marker);
+        });
+
+        marker.paradaId = data.id;
+        marker.infowindow = infowindow;
+
+        if (!window.markersParadas) window.markersParadas = [];
+        window.markersParadas.push(marker);
+
+        document.getElementById("nombreParada").value="";
+    });
+
+}
+
+/* ===============================
+   CARGAR PARADAS EXISTENTES
+=============================== */
+
+function cargarParadasExistentes(){
+
+    const paradas = JSON.parse(
+        document.getElementById("paradas-data").textContent
+    );
+
+    paradas.forEach(p => {
+
+        const marker = new google.maps.Marker({
+            position: {
+                lat: parseFloat(p.lat),
+                lng: parseFloat(p.lng)
+            },
+            map: mapa,
+            title: p.nombre
+        });
+
+        const infowindow = new google.maps.InfoWindow({
+            content: `<div>
+                        <strong>${p.nombre}</strong><br>
+                        <button class="btn btn-danger" onclick="eliminarParada(${p.id}, this)">Eliminar</button>
+                      </div>`
+        });
+
+        marker.addListener("click", function () {
+            infowindow.open(mapa, marker);
+        });
+
+        // Guardar referencia del marcador dentro del objeto para eliminarlo luego
+        marker.paradaId = p.id;
+        marker.infowindow = infowindow;
+
+        // Agregar marcador a un array global
+        if (!window.markersParadas) window.markersParadas = [];
+        window.markersParadas.push(marker);
+    });
+}
+
+/* ===============================
+   COOKIE HELPER
+=============================== */
+
+function getCookie(name){
+    let cookieValue = null;
+
+    if(document.cookie && document.cookie !== ""){
+        document.cookie.split(";").forEach(c=>{
+            c = c.trim();
+            if(c.substring(0,name.length+1) === (name+"=")){
+                cookieValue = decodeURIComponent(c.substring(name.length+1));
+            }
+        });
+    }
+
+    return cookieValue;
+}
+
+/* ===============================
+   ELIMINAR PARADA
+=============================== */
+
+function eliminarParada(idParada, boton) {
+    if(!confirm("¿Estás seguro de que deseas eliminar esta parada?")) return;
+
+    fetch("/admin-panel/eliminar_parada/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken")
+        },
+        body: JSON.stringify({id: idParada})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.status === "success"){
+            // Buscar el marcador por id y removerlo
+            const marker = window.markersParadas.find(m => m.paradaId === idParada);
+            if(marker){
+                marker.setMap(null); // quita del mapa
+                marker.infowindow.close(); // cierra info window
+                // remover del array
+                window.markersParadas = window.markersParadas.filter(m => m.paradaId !== idParada);
+            }
+
+            alert("Parada eliminada correctamente.");
+        } else {
+            alert("Error al eliminar la parada: " + data.message);
+        }
+    });
+}
+
+</script>
+
+<script async
+src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&callback=inicializarMapa&libraries=geometry,drawing">
+</script>
+
+{% endblock %}

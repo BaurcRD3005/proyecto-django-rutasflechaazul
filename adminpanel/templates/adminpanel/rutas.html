@@ -1,0 +1,435 @@
+{% extends "adminpanel/base_admin.html" %}
+
+{% block title %}Gestión de Rutas - Flecha Azul{% endblock %}
+{% block page_title %}Gestión de Rutas{% endblock %}
+
+{% block content %}
+
+<div class="chart-card">
+    <h3>Crear Ruta</h3>
+
+    <input type="text" id="nombreRuta" placeholder="Nombre de la ruta" class="table-search">
+
+    <h4>Color</h4>
+
+    <div class="color-picker">
+        <div class="color-box active" style="background:#ff0000" data-color="#ff0000"></div>
+        <div class="color-box" style="background:#2563eb" data-color="#2563eb"></div>
+        <div class="color-box" style="background:#16a34a" data-color="#16a34a"></div>
+        <div class="color-box" style="background:#9333ea" data-color="#9333ea"></div>
+    </div>
+
+    <button class="btn btn-primary" onclick="guardarRuta()">
+        Guardar Ruta
+    </button>
+</div>
+
+<div class="chart-card">
+    <h3>Mapa</h3>
+    <div id="mapa" style="height:500px"></div>
+</div>
+
+<div class="chart-card">
+    <h3>Rutas existentes</h3>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Color</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+
+        <tbody id="tablaRutas"></tbody>
+    </table>
+</div>
+
+{% endblock %}
+
+{% block extra_js_scripts %}
+
+{{ rutas|json_script:"rutas-data" }}
+{{ paradas|json_script:"paradas-data" }}
+
+
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=drawing,geometry,marker&callback=inicializarMapa">
+    </script>
+
+<script>
+
+    /* ===============================
+       VARIABLES
+    =============================== */
+
+    let mapa;
+    let polyline;
+    let paradasRuta = [];
+    let colorRuta = "#ff0000";
+    let rutaEditando = null; // Aquí guardaremos el ID de la ruta que estás editando
+
+
+    /* ===============================
+       INICIALIZAR MAPA
+    =============================== */
+
+    function inicializarMapa() {
+
+        mapa = new google.maps.Map(
+            document.getElementById("mapa"),
+            {
+                center: { lat: 19.3167, lng: -98.2390 },
+                zoom: 14
+            }
+        );
+
+        polyline = new google.maps.Polyline({
+            map: mapa,
+            strokeColor: colorRuta,
+            strokeWeight: 5
+        });
+
+        inicializarColorPicker();
+        cargarParadas();
+        cargarRutasTabla();
+        inicializarEventosMapa();
+    }
+
+
+    /* ===============================
+       CLICK MAPA → NO CREAR PARADAS
+       SOLO SELECCIONAR PARADAS EXISTENTES
+    =============================== */
+
+    function inicializarEventosMapa() {
+
+        // NO crear paradas nuevas desde el mapa
+    }
+
+
+    /* ===============================
+       AGREGAR PARADA A RUTA
+    =============================== */
+
+    function agregarParadaTemporal(parada, lat, lng) {
+
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+            map: mapa,
+            position: { lat, lng }
+        });
+
+        const paradaObj = {
+            id: parada.id,
+            lat: lat,
+            lng: lng,
+            marker: marker
+        };
+
+        paradasRuta.push(paradaObj);
+
+        // CLICK PARA ELIMINAR LA PARADA
+        marker.addListener("click", () => {
+
+            paradasRuta = paradasRuta.filter(p => p !== paradaObj);
+
+            marker.map = null; // eliminar marcador
+
+            dibujarLineaSimple();
+        });
+
+        dibujarLineaSimple();
+    }
+
+
+    /* ===============================
+       DIBUJAR LINEA
+    =============================== */
+
+    function dibujarLineaSimple() {
+
+        if (!polyline) return;
+
+        polyline.setPath(
+            paradasRuta.map(p => ({
+                lat: p.lat,
+                lng: p.lng
+            }))
+        );
+    }
+
+
+    /* ===============================
+       COLOR PICKER
+    =============================== */
+
+    function inicializarColorPicker() {
+
+        document.querySelectorAll(".color-box").forEach(box => {
+            box.onclick = function () {
+
+                document.querySelectorAll(".color-box")
+                    .forEach(b => b.classList.remove("active"));
+
+                this.classList.add("active");
+
+                colorRuta = this.dataset.color;
+
+                polyline.setOptions({
+                    strokeColor: colorRuta
+                });
+            };
+        });
+    }
+
+
+    /* ===============================
+       GUARDAR RUTA
+    =============================== */
+
+    function guardarRuta() {
+
+        if (paradasRuta.length === 0) {
+            alert("Selecciona paradas en el mapa");
+            return;
+        }
+
+        // Si estamos editando, usamos la URL de edición; si no, la de crear
+        let url = "/admin-panel/crear_ruta/";
+        if (rutaEditando) {
+            url = `/admin-panel/editar_ruta/${rutaEditando}/`;
+        }
+
+        fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken")
+            },
+            body: JSON.stringify({
+                nombre: document.getElementById("nombreRuta").value,
+                color: colorRuta,
+                paradas: paradasRuta.map(p => ({ id: p.id }))
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok) {
+                    alert("Ruta guardada correctamente ✅");
+                    location.reload(); // recarga la tabla y el mapa
+                } else {
+                    alert("Error al guardar la ruta");
+                }
+            });
+    }
+
+    /* ===============================
+       TABLA RUTAS
+    =============================== */
+
+    function cargarRutasTabla() {
+
+        const rutas = JSON.parse(
+            document.getElementById("rutas-data").textContent
+        );
+
+        let tbody = document.getElementById("tablaRutas");
+        tbody.innerHTML = "";
+
+        rutas.forEach(r => {
+
+            let tr = document.createElement("tr");
+
+            let tdNombre = document.createElement("td");
+            tdNombre.textContent = r.nombre;
+
+            let tdColor = document.createElement("td");
+            let color = document.createElement("div");
+
+            tdColor.appendChild(color);
+
+            let tdAccion = document.createElement("td");
+
+            let btnVer = document.createElement("button");
+            btnVer.textContent = "Ver";
+            btnVer.onclick = () => mostrarRuta(r);
+
+            let btnEditar = document.createElement("button");
+            btnEditar.textContent = "Editar";
+            btnEditar.onclick = () => editarRuta(r);
+
+            let btnEliminar = document.createElement("button");
+            btnEliminar.textContent = "Eliminar";
+            btnEliminar.onclick = () => eliminarRuta(r.id);
+
+            btnVer.style.marginRight = "8px";
+            btnEditar.style.marginRight = "8px";
+
+            tdAccion.appendChild(btnVer);
+            tdAccion.appendChild(btnEditar);
+            tdAccion.appendChild(btnEliminar);
+
+            tr.appendChild(tdNombre);
+            tr.appendChild(tdColor);
+            tr.appendChild(tdAccion);
+
+            tbody.appendChild(tr);
+        });
+    }
+
+
+    /* ===============================
+       MOSTRAR RUTA
+    =============================== */
+
+    function mostrarRuta(ruta) {
+
+        limpiarRutaActual();
+
+        paradasRuta = ruta.paradas.map(p => ({
+            id: p.id,
+            lat: parseFloat(p.lat),
+            lng: parseFloat(p.lng)
+        }));
+
+        dibujarLineaSimple();
+        mapFitBounds();
+    }
+
+
+    function editarRuta(ruta) {
+
+        rutaEditando = ruta.id;
+
+        limpiarRutaActual();
+
+        document.getElementById("nombreRuta").value = ruta.nombre;
+
+        colorRuta = ruta.color;
+
+        polyline.setOptions({
+            strokeColor: colorRuta
+        });
+
+        paradasRuta = ruta.paradas.map(p => ({
+            id: p.id,
+            lat: parseFloat(p.lat),
+            lng: parseFloat(p.lng)
+        }));
+
+        dibujarLineaSimple();
+
+        mapFitBounds();
+    }
+
+    /* ===============================
+       LIMPIAR RUTA
+    =============================== */
+
+    function limpiarRutaActual() {
+
+        paradasRuta.forEach(p => {
+            if (p.marker) {
+                p.marker.map = null;
+            }
+        });
+
+        paradasRuta = [];
+
+        if (polyline) {
+            polyline.setPath([]);
+        }
+    }
+
+
+    /* ===============================
+       FIT MAP
+    =============================== */
+
+    function mapFitBounds() {
+
+        if (paradasRuta.length === 0) return;
+
+        let bounds = new google.maps.LatLngBounds();
+
+        paradasRuta.forEach(p => {
+            bounds.extend(new google.maps.LatLng(p.lat, p.lng));
+        });
+
+        mapa.fitBounds(bounds);
+    }
+
+
+    /* ===============================
+       PARADAS EXISTENTES
+    =============================== */
+
+    function cargarParadas() {
+
+        const paradas = JSON.parse(
+            document.getElementById("paradas-data").textContent
+        );
+
+        paradas.forEach(p => {
+
+            let marker = new google.maps.Marker({
+                position: {
+                    lat: parseFloat(p.lat),
+                    lng: parseFloat(p.lng)
+                },
+                map: mapa,
+                title: p.nombre
+            });
+
+            marker.addListener("click", () => {
+
+                agregarParadaTemporal(
+                    { id: p.id },
+                    parseFloat(p.lat),
+                    parseFloat(p.lng)
+                );
+
+            });
+        });
+    }
+
+
+    /* ===============================
+       COOKIE
+    =============================== */
+
+    function getCookie(name) {
+
+        let cookieValue = null;
+
+        document.cookie.split(";").forEach(c => {
+            c = c.trim();
+
+            if (c.startsWith(name + "=")) {
+                cookieValue = decodeURIComponent(
+                    c.substring(name.length + 1)
+                );
+            }
+        });
+
+        return cookieValue;
+    }
+
+
+    /* ===============================
+       ELIMINAR RUTA
+    =============================== */
+
+    function eliminarRuta(id) {
+
+        fetch(`/admin-panel/eliminar_ruta/${id}/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getCookie("csrftoken")
+            }
+        }).then(() => location.reload());
+    }
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,501 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Panel de Control - Flecha Azul {% endblock %}</title>
+    <!-- FAVICON -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo.png' %}">
+
+    <!-- FONT AWESOME -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- GOOGLE FONTS -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+    <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
+
+    <style>
+        /* ESTILOS ADICIONALES PARA DASHBOARD */
+        .dashboard-welcome {
+            background: linear-gradient(135deg, var(--azul-primario), var(--azul-secundario));
+            color: white;
+            padding: 2.5rem;
+            border-radius: var(--radio-borde);
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dashboard-welcome::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .welcome-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .welcome-content h1 {
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-content h1::after {
+            display: none;
+        }
+
+        .current-time {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: var(--radio-borde);
+            padding: 1.5rem;
+            box-shadow: var(--sombra-suave);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-title {
+            font-weight: 600;
+            color: var(--gris-oscuro);
+        }
+
+        .chart-period {
+            color: var(--gris-medio);
+            font-size: 0.9rem;
+        }
+
+        .chart-placeholder {
+            height: 250px;
+            background: linear-gradient(45deg, #f3f4f6, #e5e7eb);
+            border-radius: var(--radio-borde);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gris-medio);
+        }
+
+        .recent-activity {
+            margin-top: 2rem;
+        }
+
+        .activity-list {
+            list-style: none;
+            margin-top: 1.5rem;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid var(--gris-claro);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .activity-icon.user {
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+        }
+
+        .activity-icon.route {
+            background: linear-gradient(135deg, #10b981, #34d399);
+        }
+
+        .activity-icon.schedule {
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+        }
+
+        .activity-icon.system {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+        }
+
+        .activity-info {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 500;
+            color: var(--gris-oscuro);
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-time {
+            color: var(--gris-medio);
+            font-size: 0.875rem;
+        }
+
+        .system-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: var(--radio-borde);
+            padding: 1.5rem;
+            box-shadow: var(--sombra-suave);
+            text-align: center;
+        }
+
+        .status-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-icon.online {
+            color: var(--acento-verde);
+        }
+
+        .status-icon.warning {
+            color: var(--acento-oro);
+        }
+
+        .status-icon.offline {
+            color: var(--gris-medio);
+        }
+
+        .status-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gris-oscuro);
+            margin-bottom: 0.25rem;
+        }
+
+        .status-label {
+            color: var(--gris-medio);
+            font-size: 0.9rem;
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--gris-oscuro);
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: block;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .admin-sidebar.active {
+                transform: translateX(0);
+            }
+
+            .admin-main {
+                margin-left: 0;
+            }
+
+            .admin-sidebar.active~.admin-main {
+                margin-left: 250px;
+            }
+        }
+
+        .notification-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 350px;
+            background: white;
+            border-radius: var(--radio-borde);
+            box-shadow: var(--sombra-media);
+            z-index: 1000;
+            display: none;
+            margin-top: 0.5rem;
+        }
+
+        .notification-dropdown.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .notification-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--gris-claro);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .notification-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--gris-claro);
+            cursor: pointer;
+            transition: var(--transicion);
+        }
+
+        .notification-item:hover {
+            background: var(--azul-suave);
+        }
+
+        .notification-item.unread {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .notification-title {
+            font-weight: 500;
+            color: var(--gris-oscuro);
+            margin-bottom: 0.25rem;
+        }
+
+        .notification-time {
+            color: var(--gris-medio);
+            font-size: 0.875rem;
+        }
+
+        .notification-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--gris-claro);
+            text-align: center;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .color-box {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .color-box.active {
+            border: 2px solid black;
+        }
+    </style>
+</head>
+
+<body class="admin-body">
+    <!-- SIDEBAR -->
+    <aside class="admin-sidebar" id="adminSidebar">
+        <!-- LOGO -->
+        <div class="sidebar-header">
+            <div class="admin-logo">
+                <img src="{% static 'images/logo.png' %}" alt="Flecha Azul">
+                <span class="admin-logo-text">Flecha Azul</span>
+            </div>
+        </div>
+
+        <!-- USUARIO -->
+        <div class="sidebar-user">
+            <div class="user-avatar">
+                <span id="userInitials">
+                    {{ request.user.get_full_name|default:request.user.username|slice:":1"|upper }}
+                </span>
+            </div>
+            <div class="user-name" id="userName">
+                {{ request.user.get_full_name|default:request.user.username }}
+            </div>
+            <div class="user-role">
+                {% if request.user.is_superuser %}
+                Super Administrador
+                {% else %}
+                Usuario Normal
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- NAVEGACIÓN -->
+        <nav class="sidebar-nav">
+            <a href="{% url 'admin_dashboard' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+                <i class="fas fa-tachometer-alt sidebar-icon"></i>
+                <span class="sidebar-text">Dashboard</span>
+            </a>
+            <a href="{% url 'admin_rutas' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'admin_rutas' %}active{% endif %}">
+                <i class="fas fa-route sidebar-icon"></i>
+                <span class="sidebar-text">Gestión de Rutas</span>
+            </a>
+            <a href="{% url 'admin_paradas' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'admin_paradas' %}active{% endif %}">
+                <i class="fas fa-map-marker-alt sidebar-icon"></i>
+                <span class="sidebar-text">Gestión de Paradas</span>
+            </a>
+            <a href="{% url 'admin_horarios' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'admin_horarios' %}active{% endif %}">
+                <i class="fas fa-clock sidebar-icon"></i>
+                <span class="sidebar-text">Gestión de Horarios</span>
+            </a>
+        </nav>
+
+        <!-- BOTÓN CERRAR SESIÓN -->
+        <div style="padding: 1.5rem; text-align: center;">
+            <button class="btn btn-primary" onclick="cerrarSesion()">
+                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </button>
+        </div>
+
+        <!-- FOOTER SIDEBAR -->
+        <div
+            style="position: absolute; bottom: 0; width: 100%; padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="text-align: center; color: rgba(255,255,255,0.7); font-size: 0.875rem;">
+                <p>Sistema v2.0.1</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="admin-main" id="adminMain">
+        <!-- CONTENIDO -->
+        <div class="admin-content">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    {% block extra_js_scripts %}{% endblock %}
+
+    <!-- JavaScript -->
+    <script>
+
+        // Cerrar sesión
+        function cerrarSesion() {
+            if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                // Simular cierre de sesión
+                const btn = event.currentTarget;
+                const originalHTML = btn.innerHTML;
+
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cerrando sesión...';
+                btn.disabled = true;
+
+                setTimeout(() => {
+                    localStorage.removeItem('adminUser');
+                    window.location.href = '{% url "admin_login" %}';
+                }, 1000);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Elementos del DOM
+            const adminSidebar = document.getElementById('adminSidebar');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const userName = document.getElementById('userName');
+            const userInitials = document.getElementById('userInitials');
+            const currentDateTime = document.getElementById('currentDateTime');
+            const sidebarTime = document.getElementById('sidebarTime');
+            const activityList = document.getElementById('activityList');
+            const queriesTable = document.getElementById('queriesTable');
+
+            // Actualizar hora en tiempo real
+            function updateTime() {
+                const now = new Date();
+                const options = {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                };
+
+                const dateTimeStr = now.toLocaleDateString('es-MX', options);
+                const timeStr = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+                if (currentDateTime) {
+                    currentDateTime.textContent = dateTimeStr;
+                }
+                if (sidebarTime) {
+                    sidebarTime.textContent = timeStr;
+                }
+            }
+
+            // Actualizar cada segundo
+            updateTime();
+            setInterval(updateTime, 1000);
+
+            // Inicializar
+            if (typeof updateDynamicData === "function") {
+                updateDynamicData();
+            }
+
+            // Protección básica contra inspección
+            /**document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+            });
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'F12' || 
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || 
+                    (e.ctrlKey && e.key === 'u')) {
+                    e.preventDefault();
+                    alert('Acción no permitida en modo administrador');
+                }
+            });**/
+        });
+    </script>
+
+</body>
+
+</html>

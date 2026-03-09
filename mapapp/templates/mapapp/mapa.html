@@ -1,0 +1,521 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Ruta - Flecha Azul</title>
+    <!-- FAVICON -->
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo.png' %}">
+
+    <!-- FONT AWESOME -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- GOOGLE FONTS -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
+
+    <style>
+        /* ESTILOS ESPECÍFICOS PARA MAPA */
+        .map-hero {
+            padding: 8rem 0 3rem;
+            background: linear-gradient(rgba(30, 64, 175, 0.9), rgba(30, 64, 175, 0.8));
+            color: white;
+        }
+
+        .map-container {
+            margin: 2rem 0;
+            border-radius: var(--radio-borde);
+            overflow: hidden;
+            box-shadow: var(--sombra-fuerte);
+            position: relative;
+        }
+
+        .map-wrapper {
+            position: relative;
+            background: #e5e7eb;
+            min-height: 500px;
+        }
+
+        .map-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .map-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .map-btn {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--sombra-suave);
+            transition: var(--transicion);
+            color: var(--azul-primario);
+        }
+
+        .map-btn:hover {
+            background: var(--azul-suave);
+            transform: scale(1.1);
+        }
+
+        .stop-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--azul-secundario);
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: var(--transicion);
+            z-index: 5;
+        }
+
+        .stop-marker:hover {
+            transform: scale(1.5);
+            background: var(--acento-oro);
+        }
+
+        .stop-marker.active {
+            background: var(--acento-oro);
+            transform: scale(1.3);
+            animation: pulse 1.5s infinite;
+        }
+
+        .stop-tooltip {
+            position: absolute;
+            background: white;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radio-borde);
+            box-shadow: var(--sombra-media);
+            min-width: 200px;
+            z-index: 20;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .stop-tooltip.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .stops-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .stop-card {
+            background: white;
+            border-radius: var(--radio-borde);
+            padding: 1.5rem;
+            box-shadow: var(--sombra-suave);
+            transition: var(--transicion);
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .stop-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--sombra-media);
+            border-color: var(--azul-suave);
+        }
+
+        .stop-card.active {
+            border-color: var(--azul-secundario);
+            background: var(--azul-suave);
+        }
+
+        .stop-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .stop-number {
+            width: 30px;
+            height: 30px;
+            background: var(--azul-primario);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .stop-type {
+            font-size: 0.875rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            background: var(--gris-claro);
+            color: var(--gris-medio);
+        }
+
+        .stop-schedule {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--gris-claro);
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: white;
+            border-radius: var(--radio-borde);
+            box-shadow: var(--sombra-suave);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .legend-color.primary {
+            background: var(--azul-secundario);
+        }
+
+        .legend-color.secondary {
+            background: var(--acento-verde);
+        }
+
+        .legend-color.tertiary {
+            background: var(--acento-oro);
+        }
+
+        .map-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--gris-medio);
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- HEADER -->
+    <header class="header" id="header">
+        <div class="container">
+            <div class="header-content">
+                <!-- LOGO -->
+                <a href="{% url 'index' %}" class="logo">
+                    <img src="{% static 'images/logo.png' %}" alt="Logo Flecha Azul" class="logo-img">
+                    <span class="logo-text">Flecha Azul</span>
+                </a>
+
+                <!-- NAVEGACIÓN -->
+                <nav class="nav">
+                    <ul class="nav-links">
+                        <li><a href="{% url 'index' %}" class="nav-link">Inicio</a></li>
+                        <li><a href="{% url 'mapa' %}" class="nav-link active">Mapa</a></li>
+                        <li><a href="{% url 'horarios' %}" class="nav-link">Horarios</a></li>
+                        <li><a href="{% url 'zonas' %}" class="nav-link">Zonas</a></li>
+                        <li><a href="{% url 'admin_login' %}" class="btn btn-secondary">Admin</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO MAPA -->
+    <section class="map-hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 style="color: white;">Conoce nuestras rutas y paradas</h1>
+                <p class="hero-subtitle" style="color:#ffff;">
+                    Haz clic en cualquier parada para verla en el mapa
+                    <i class="fas fa-map-marker-alt" style="color:red; margin-left:5px;"></i>
+                </p>
+                <div class="mt-3">
+                    <a href="#mapa" class="btn btn-primary">
+                        <i class="fas fa-map"></i> Ver Mapa
+                    </a>
+                    <a href="#paradas" class="btn" style="background: rgba(255,255,255,0.2); color: white;">
+                        <i class="fas fa-list"></i> Ver Paradas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container">
+
+        <!-- MAPA INTERACTIVO -->
+        <div class="map-container" id="mapa">
+            <div class="map-wrapper">
+                <!-- MENSAJE DE CARGA -->
+                <div class="map-loading" id="mapLoading">
+                    <i class="fas fa-spinner fa-spin fa-3x"
+                        style="margin-bottom: 1rem; color: var(--azul-secundario);"></i>
+                    <h3>Cargando mapa...</h3>
+                    <p>Por favor espera mientras se carga el recorrido</p>
+                </div>
+                <!-- IMAGEN DEL MAPA -->
+                <div id="map" style="width:100%; height:500px;"></div>
+            </div>
+        </div>
+
+        <!-- LISTA DE PARADAS -->
+        <section id="paradas">
+            <div class="stops-list" id="stopsList">
+                <!-- Las paradas se generarán dinámicamente con JavaScript -->
+            </div>
+            <div style="height:120px"></div>
+        </section>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <!-- HORARIOS Y DIRECCIÓN CON ICONOS CENTRADOS -->
+            <div class="footer-center-text"
+                style="display: flex; justify-content: center; align-items: center; gap: 1rem; width: 100%; margin-bottom: 1.5rem; font-size: 1rem; color: rgba(255,255,255,0.8);">
+                <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
+                    <i class="fas fa-clock"></i> Lun - SAB: 5:30 AM - 11:30 PM | DOM: 6:30 AM - 10:30 PM
+                </span>
+                <span class="separator" style="color: rgba(255,255,255,0.8); font-weight: bold;">|</span>
+                <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
+                    <i class="fas fa-map-marker-alt"></i> 72090, Av. 10 Pte. 113, San Miguelito, Heroica Puebla de
+                    Zaragoza, Pue.
+                </span>
+            </div>
+
+            <!-- FOOTER BOTTOM -->
+            <div class="footer-bottom">
+                <p>&copy; 2026 Flecha Azul - Todos los derechos reservados. |
+                    <a href="#">Términos y Condiciones</a> |
+                    <a href="#">Política de Privacidad</a>
+                </p>
+                <p class="mt-1" style="font-size: 0.875rem; color: rgba(255,255,255,0.5);">
+                    <i class="fas fa-bus"></i> Viaja seguro, viaja con Flecha Azul
+                </p>
+            </div>
+        </div>
+    </footer>
+
+
+
+    {{ rutas|json_script:"rutas-data" }}
+
+    <!-- JavaScript -->
+    <script>
+        function inicializarMapa() {
+
+            const rutas = JSON.parse(
+                document.getElementById("rutas-data").textContent
+            );
+
+            const mapa = new google.maps.Map(
+                document.getElementById("map"),
+                {
+                    zoom: 11,
+                    center: { lat: 19.3165, lng: -98.2450 }
+                }
+            );
+
+            const bounds = new google.maps.LatLngBounds();
+
+            rutas.forEach(ruta => {
+
+                if (!ruta.paradas) return;
+
+                // ===== DIBUJAR RUTA =====
+                const path = ruta.paradas.map(p => {
+
+                    const pos = {
+                        lat: Number(p.lat),
+                        lng: Number(p.lng)
+                    };
+
+                    bounds.extend(pos);
+
+                    return pos;
+                });
+
+                new google.maps.Polyline({
+                    path: path,
+                    strokeColor: ruta.color || "#2563eb",
+                    strokeWeight: 5,
+                    map: mapa
+                });
+
+                // ===== MARCADORES DE PARADAS =====
+                ruta.paradas.forEach(parada => {
+
+                    const position = {
+                        lat: Number(parada.lat),
+                        lng: Number(parada.lng)
+                    };
+
+                    const marker = new google.maps.Marker({
+                        position,
+                        map: mapa,
+                        title: parada.nombre
+                    });
+
+                    // InfoWindow
+                    const info = new google.maps.InfoWindow({
+                        content: `
+                    <div style="padding:10px">
+                        <h4>${parada.nombre}</h4>
+                        <p>Ruta: ${ruta.nombre || ""}</p>
+                    </div>
+                `
+                    });
+
+                    marker.addListener("click", () => {
+                        info.open(mapa, marker);
+                    });
+
+                });
+
+            });
+
+            window.inicializarMapa = inicializarMapa;
+
+            mapa.fitBounds(bounds);
+
+            crearTarjetasRutas(rutas);
+
+            document.getElementById("mapLoading").style.display = "none";
+        }
+
+        function crearTarjetasRutas(rutas) {
+
+            const contenedor = document.getElementById("stopsList");
+
+            rutas.forEach((ruta, index) => {
+
+                const card = document.createElement("div");
+                card.className = "stop-card";
+
+                card.innerHTML = `
+
+            <div class="stop-header">
+
+                <div class="stop-number">
+                    ${index + 1}
+                </div>
+
+                <span class="stop-type">
+                    RUTA
+                </span>
+
+            </div>
+
+            <h4>
+                <i class="fas fa-route"></i>
+                ${ruta.nombre}
+            </h4>
+
+            <p style="color: var(--gris-medio); margin:0.5rem 0;">
+                <i class="fas fa-clock"></i>
+                ${ruta.horario}
+            </p>
+
+            <div class="stop-schedule">
+
+                <div>
+                    <small>Frecuencia</small>
+                    <p style="font-weight:600;color: var(--gris-medio);font-size:0.95rem;">
+                        ${ruta.frecuencia}
+                    </p>
+                </div>
+
+                <div>
+                    <small>Color Ruta</small>
+                    <p style="font-weight:600;">
+                        <span style="
+                            display:inline-block;
+                            width:18px;
+                            height:18px;
+                            border-radius:50%;
+                            background:${ruta.color};
+                        "></span>
+                    </p>
+                </div>
+
+            </div>
+
+        `;
+
+                contenedor.appendChild(card);
+
+            });
+
+        }
+
+
+    </script>
+
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=drawing,geometry,marker&callback=inicializarMapa">
+        </script>
+
+</body>
+
+</html>

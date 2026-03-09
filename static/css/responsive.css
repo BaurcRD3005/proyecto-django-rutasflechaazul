@@ -1,0 +1,209 @@
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* TABLETS (768px - 1023px) */
+@media (max-width: 1023px) {
+    h1 {
+        font-size: 2.5rem;
+    }
+    
+    h2 {
+        font-size: 2rem;
+    }
+    
+    .hero h1 {
+        font-size: 2.8rem;
+    }
+    
+    .section {
+        padding: 4rem 0;
+    }
+    
+    .search-form {
+        flex-direction: column;
+    }
+    
+    .form-group {
+        min-width: 100%;
+    }
+}
+
+/* MÓVILES (767px y menos) */
+@media (max-width: 767px) {
+    h1 {
+        font-size: 2rem;
+    }
+    
+    h2 {
+        font-size: 1.75rem;
+    }
+    
+    .hero {
+        padding: 8rem 0 4rem;
+    }
+    
+    .hero h1 {
+        font-size: 2.2rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.1rem;
+    }
+    
+    /* HEADER RESPONSIVE */
+    .nav-links {
+        position: fixed;
+        top: 70px;
+        left: 0;
+        width: 100%;
+        background: var(--blanco);
+        flex-direction: column;
+        padding: 1rem;
+        box-shadow: var(--sombra-media);
+        transform: translateY(-100%);
+        opacity: 0;
+        visibility: hidden;
+        transition: var(--transicion);
+        z-index: 999;
+    }
+    
+    .nav-links.active {
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .mobile-menu-btn {
+        display: block;
+    }
+    
+    /* BOTONES */
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* GRIDS */
+    .steps-grid,
+    .zones-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .step-card,
+    .zone-card {
+        padding: 2rem 1.5rem;
+    }
+    
+    /* SEARCH CONTAINER */
+    .search-container {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+    
+    /* FOOTER */
+    .footer-content {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .container {
+        padding: 0 1rem;
+    }
+}
+
+/* MÓVILES PEQUEÑOS (480px y menos) */
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.75rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    .hero h1 {
+        font-size: 1.8rem;
+    }
+    
+    .logo-text {
+        font-size: 1.2rem;
+    }
+    
+    .logo-img {
+        height: 40px;
+    }
+    
+    .section {
+        padding: 3rem 0;
+    }
+    
+    .step-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+}
+
+/* DESKTOP GRANDES (1440px y más) */
+@media (min-width: 1440px) {
+    .container {
+        max-width: 1400px;
+    }
+    
+    h1 {
+        font-size: 3.5rem;
+    }
+    
+    .hero h1 {
+        font-size: 4rem;
+    }
+}
+
+/* ALTURAS ESPECÍFICAS */
+@media (max-height: 600px) {
+    .hero {
+        padding: 7rem 0 3rem;
+        min-height: auto;
+    }
+}
+
+/* ORIENTACIÓN LANDSCAPE EN MÓVILES */
+@media (max-height: 500px) and (orientation: landscape) {
+    .hero {
+        padding: 6rem 0 2rem;
+    }
+    
+    .hero h1 {
+        font-size: 2rem;
+    }
+    
+    .search-container {
+        padding: 1rem;
+        margin: 0.5rem 0;
+    }
+}
+
+/* IMPRESIÓN */
+@media print {
+    .header,
+    .footer,
+    .btn,
+    .mobile-menu-btn {
+        display: none !important;
+    }
+    
+    body {
+        background: white !important;
+        color: black !important;
+    }
+    
+    .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+    
+    a {
+        color: black !important;
+        text-decoration: underline !important;
+    }
+}

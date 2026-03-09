@@ -1,0 +1,254 @@
+{% extends "adminpanel/base_admin.html" %}
+
+{% block title %}Gestión de Horarios - Flecha Azul{% endblock %}
+{% block page_title %}Gestión de Horarios{% endblock %}
+
+{% block content %}
+
+<style>
+    .schedules-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .schedules-table th {
+        background: #1e40af;
+        color: white;
+        padding: 12px;
+        text-align: left;
+    }
+
+    .schedules-table td {
+        padding: 12px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .schedules-table tr:hover {
+        background: #f1f5f9;
+    }
+</style>
+
+<!-- JSON DATA SAFE (PROFESIONAL WAY ⭐) -->
+{{ horarios_json|json_script:"horarios-data" }}
+{{ paradas_json|json_script:"paradas-data" }}
+
+
+<div class="chart-card">
+
+    <div class="chart-header">
+        <h3 class="chart-title">Crear Horario</h3>
+    </div>
+
+    <!-- FORMULARIO -->
+    <div style="margin-bottom:1rem">
+
+        <select id="ruta" class="table-search">
+            <option value="">Ruta</option>
+            {% for r in rutas %}
+            <option value="{{ r.id }}">{{ r.nombre }}</option>
+            {% endfor %}
+        </select>
+
+        <select id="origen" class="table-search">
+            <option value="">Origen</option>
+            {% for p in paradas %}
+            <option value="{{ p.id }}">{{ p.nombre }}</option>
+            {% endfor %}
+        </select>
+
+        <select id="destino" class="table-search">
+            <option value="">Destino</option>
+            {% for p in paradas %}
+            <option value="{{ p.id }}">{{ p.nombre }}</option>
+            {% endfor %}
+        </select>
+
+        <input type="time" id="primer_viaje" class="table-search">
+        <input type="time" id="ultimo_viaje" class="table-search">
+
+        <input type="text" id="frecuencia" placeholder="Frecuencia" class="table-search">
+        <input type="number" id="tarifa" placeholder="Tarifa" class="table-search">
+        <input type="number" id="descuento" placeholder="Descuento" class="table-search">
+
+        <button type="button" onclick="crearHorario()" class="btn btn-primary">
+            Guardar
+        </button>
+
+    </div>
+
+    <!-- TABLA -->
+    <table class="schedules-table">
+        <thead>
+            <tr>
+                <th>Origen</th>
+                <th>Destino</th>
+                <th>Primer Viaje</th>
+                <th>Último Viaje</th>
+                <th>Frecuencia</th>
+                <th>Tarifa</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody id="tablaHorarios">
+            {% for h in horarios %}
+            <tr id="fila{{h.id}}">
+                <td>{{h.origen.nombre}}</td>
+                <td>{{h.destino.nombre}}</td>
+                <td>{{h.primer_viaje}}</td>
+                <td>{{h.ultimo_viaje}}</td>
+                <td>{{h.frecuencia}}</td>
+                <td>${{h.tarifa}}</td>
+                <td>
+                    <button class="btnEditar" data-id="{{h.id}}">
+                        Editar
+                    </button>
+                    <button class="btnEliminar" data-id="{{h.id}}">
+                        Eliminar
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js_scripts %}
+<script>
+
+    /* ==========================
+    CARGAR JSON
+    ========================== */
+    const horariosData = JSON.parse(
+        document.getElementById("horarios-data").textContent
+    );
+
+    const paradasData = JSON.parse(
+        document.getElementById("paradas-data").textContent
+    );
+
+    /* ==========================
+    CSRF
+    ========================== */
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+            document.cookie.split(";").forEach(c => {
+                c = c.trim();
+                if (c.startsWith(name + "=")) {
+                    cookieValue = decodeURIComponent(
+                        c.substring(name.length + 1)
+                    );
+                }
+            });
+        }
+        return cookieValue;
+    }
+
+    /* ==========================
+    CREAR HORARIO
+    ========================== */
+    function crearHorario() {
+
+        const origen = document.getElementById("origen").value;
+        const destino = document.getElementById("destino").value;
+        const ruta = document.getElementById("ruta").value;
+
+        if (!origen || !destino) {
+            alert("Selecciona origen y destino");
+            return;
+        }
+
+        let url = "/admin-panel/crear_horario/";
+
+        if (window.horarioEditando) {
+            url = "/admin-panel/editar_horario/" + window.horarioEditando + "/";
+        }
+
+        fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken")
+            },
+            body: JSON.stringify({
+                ruta: ruta,
+                origen: origen,
+                destino: destino,
+                primer_viaje: document.getElementById("primer_viaje").value,
+                ultimo_viaje: document.getElementById("ultimo_viaje").value,
+                frecuencia: document.getElementById("frecuencia").value,
+                tarifa: document.getElementById("tarifa").value,
+                descuento: document.getElementById("descuento").value,
+            })
+        })
+            .then(r => r.json())
+            .then(data => {
+                location.reload();
+            });
+    }
+
+    /* ==========================
+    ELIMINAR HORARIO
+    ========================== */
+    function eliminarHorario(id) {
+
+        fetch("/admin-panel/eliminar_horario/" + id + "/", {
+            method: "DELETE",
+            headers: {
+                "X-CSRFToken": getCookie("csrftoken")
+            }
+        })
+            .then(r => r.json())
+            .then(data => {
+                const fila = document.getElementById("fila" + id);
+                if (fila) fila.remove();
+            });
+
+    }
+
+    document.querySelectorAll(".btnEliminar").forEach(btn => {
+        btn.addEventListener("click", function () {
+            const id = this.dataset.id;
+            eliminarHorario(id);
+        });
+    });
+
+    /* ==========================
+    EDITAR HORARIO
+    ========================== */
+
+    document.querySelectorAll(".btnEditar").forEach(btn => {
+
+        btn.addEventListener("click", function () {
+
+            const id = this.dataset.id;
+
+            const horario = horariosData.find(h => h.id == id);
+
+            if (!horario) return;
+
+            // llenar formulario
+            document.getElementById("ruta").value = horario.ruta;
+            document.getElementById("origen").value = horario.origen;
+            document.getElementById("destino").value = horario.destino;
+
+            document.getElementById("primer_viaje").value = horario.primer_viaje;
+            document.getElementById("ultimo_viaje").value = horario.ultimo_viaje;
+
+            document.getElementById("frecuencia").value = horario.frecuencia;
+            document.getElementById("tarifa").value = horario.tarifa;
+            document.getElementById("descuento").value = horario.descuento;
+
+            // guardamos id del horario que se edita
+            window.horarioEditando = id;
+
+        });
+
+    });
+
+</script>
+{% endblock %}

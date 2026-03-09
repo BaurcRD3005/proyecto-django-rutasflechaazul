@@ -1,0 +1,333 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zonas de Cobertura - Flecha Azul</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'images/logo.png' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
+
+    <style>
+        /* ESTILOS ESPECÍFICOS PARA ZONAS */
+        .zones-hero {
+            padding: 8rem 0 3rem;
+            background: linear-gradient(rgba(30, 64, 175, 0.9), rgba(30, 64, 175, 0.8));
+            color: white;
+        }
+
+        .coverage-map {
+            margin: 3rem 0;
+            border-radius: var(--radio-borde);
+            overflow: hidden;
+            box-shadow: var(--sombra-fuerte);
+            position: relative;
+        }
+
+        .search-zones {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--radio-borde);
+            box-shadow: var(--sombra-suave);
+            margin-bottom: 2rem;
+        }
+
+        .search-input-group {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border: 1px solid var(--azul-suave);
+            border-radius: var(--radio-borde);
+            font-size: 1rem;
+            transition: var(--transicion);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--azul-secundario);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem;
+            color: var(--gris-medio);
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- HEADER -->
+    <header class="header" id="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="{% url 'index' %}" class="logo">
+                    <img src="{% static 'images/logo.png' %}" alt="Logo Flecha Azul" class="logo-img">
+                    <span class="logo-text">Flecha Azul</span>
+                </a>
+                <nav class="nav">
+                    <ul class="nav-links">
+                        <li><a href="{% url 'index' %}" class="nav-link">Inicio</a></li>
+                        <li><a href="{% url 'mapa' %}" class="nav-link">Mapa</a></li>
+                        <li><a href="{% url 'horarios' %}" class="nav-link">Horarios</a></li>
+                        <li><a href="{% url 'zonas' %}" class="nav-link active">Zonas</a></li>
+                        <li><a href="{% url 'admin_login' %}" class="btn btn-secondary">Admin</a></li>
+                    </ul>
+                </nav>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO ZONAS -->
+    <section class="zones-hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 style="color: white;">Zonas de Cobertura</h1>
+                <p class="hero-subtitle">Conectamos las principales localidades de Tlaxcala con Puebla. Encuentra tu
+                    zona.</p>
+                <div class="mt-3">
+                    <a href="#coverage" class="btn btn-primary">
+                        <i class="fas fa-map-marked-alt"></i> Ver Mapa de Cobertura
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="container">
+        <!-- BUSCADOR DE ZONAS -->
+        <div class="search-zones">
+            <h3><i class="fas fa-search"></i> Busca tu zona</h3>
+            <div class="search-input-group">
+                <input type="text" class="search-input" id="origenInput" placeholder="Origen (tu ubicación o escribe)">
+                <input type="text" class="search-input" id="destinoInput" placeholder="Destino">
+                <button class="btn btn-primary" onclick="buscarRuta()">
+                    <i class="fas fa-search"></i> Buscar ruta
+                </button>
+                <button class="btn btn-primary" onclick="obtenerUbicacion()">
+                    <i class="fas fa-location-arrow"></i> Usar mi ubicación
+                </button>
+            </div>
+        </div>
+
+        <!-- MAPA DE COBERTURA -->
+        <div class="coverage-map" id="coverage">
+            <div id="mapa" style="width:100%; height:450px;"></div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <!-- HORARIOS Y DIRECCIÓN CON ICONOS CENTRADOS -->
+            <div class="footer-center-text"
+                style="display: flex; justify-content: center; align-items: center; gap: 1rem; width: 100%; margin-bottom: 1.5rem; font-size: 1rem; color: rgba(255,255,255,0.8);">
+                <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
+                    <i class="fas fa-clock"></i> Lun - SAB: 5:30 AM - 11:30 PM | DOM: 6:30 AM - 10:30 PM
+                </span>
+                <span class="separator" style="color: rgba(255,255,255,0.8); font-weight: bold;">|</span>
+                <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
+                    <i class="fas fa-map-marker-alt"></i> 72090, Av. 10 Pte. 113, San Miguelito, Heroica Puebla de
+                    Zaragoza, Pue.
+                </span>
+            </div>
+
+            <!-- FOOTER BOTTOM -->
+            <div class="footer-bottom">
+                <p>&copy; 2026 Flecha Azul - Todos los derechos reservados. |
+                    <a href="#">Términos y Condiciones</a> |
+                    <a href="#">Política de Privacidad</a>
+                </p>
+                <p class="mt-1" style="font-size: 0.875rem; color: rgba(255,255,255,0.5);">
+                    <i class="fas fa-bus"></i> Viaja seguro, viaja con Flecha Azul
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        let mapaGlobal;
+        let directionsRenderer;
+        let miUbicacion = null; // ubicación del usuario o manual
+        let rutaActual = null;   // ruta cargada actualmente
+        let markersRuta = [];    // para limpiar markers si es necesario
+        let rutaPolyline = null; // para limpiar la ruta anterior
+
+        function inicializarMapa() {
+            mapaGlobal = new google.maps.Map(document.getElementById('mapa'), {
+                zoom: 12,
+                center: { lat: 19.3182, lng: -98.2375 }
+            });
+            directionsRenderer = new google.maps.DirectionsRenderer({ map: mapaGlobal });
+        }
+
+        function distancia(lat1, lng1, lat2, lng2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a =
+                Math.sin(dLat / 2) ** 2 +
+                Math.cos(lat1 * Math.PI / 180) *
+                Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function limpiarMapa() {
+            // Limpiar markers
+            markersRuta.forEach(m => m.setMap(null));
+            markersRuta = [];
+            // Limpiar polyline de ruta
+            if (rutaPolyline) rutaPolyline.setMap(null);
+        }
+
+        function dibujarRutaTransporte(paradas, color) {
+            const path = paradas.map(p => ({ lat: Number(p.lat), lng: Number(p.lng) }));
+            rutaPolyline = new google.maps.Polyline({
+                path,
+                geodesic: true,
+                strokeColor: color || "#ff0000",
+                strokeOpacity: 1,
+                strokeWeight: 5,
+                map: mapaGlobal
+            });
+        }
+
+        function dibujarRutaUsuario(lat1, lng1, lat2, lng2) {
+            const directionsService = new google.maps.DirectionsService();
+            directionsService.route({
+                origin: { lat: lat1, lng: lng1 },
+                destination: { lat: lat2, lng: lng2 },
+                travelMode: 'WALKING'
+            }, (result, status) => {
+                if (status === 'OK') {
+                    directionsRenderer.setDirections(result);
+                } else {
+                    console.error('Error al dibujar ruta del usuario:', status);
+                }
+            });
+        }
+
+        window.obtenerUbicacion = function () {
+            if (!navigator.geolocation) return;
+
+            navigator.geolocation.getCurrentPosition(pos => {
+                miUbicacion = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                document.getElementById('origenInput').value = miUbicacion.lat + ',' + miUbicacion.lng;
+
+                new google.maps.Marker({
+                    position: miUbicacion,
+                    map: mapaGlobal,
+                    title: "Tu ubicación"
+                });
+
+                mapaGlobal.setCenter(miUbicacion);
+            });
+        }
+
+        function buscarRuta() {
+            const destino = document.getElementById('destinoInput').value;
+            if (!destino) return alert("Ingresa destino");
+
+            const origenInput = document.getElementById('origenInput').value;
+            const geocoder = new google.maps.Geocoder();
+
+            const procesarUbicacion = (lat, lng) => {
+                miUbicacion = { lat, lng };
+
+                fetch(`/buscar_zona/?zona=${destino}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        limpiarMapa();
+
+                        // 1️⃣ Si no hay paradas en la zona
+                        if (!data.paradas || data.paradas.length === 0) {
+                            alert("No hay ruta en esta zona");
+                            return; // ❌ No dibujar nada
+                        }
+
+                        // 2️⃣ Dibujar marcadores de las paradas
+                        data.paradas.forEach(p => {
+                            const marker = new google.maps.Marker({
+                                position: { lat: Number(p.lat), lng: Number(p.lng) },
+                                map: mapaGlobal,
+                                title: p.nombre,
+                                icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+                            });
+                            markersRuta.push(marker);
+                        });
+
+                        // 3️⃣ Dibujar ruta de transporte
+                        dibujarRutaTransporte(data.paradas, data.color);
+
+                        // 4️⃣ Dibujar ruta del usuario solo si hay ubicación y está cerca de alguna parada
+                        if (miUbicacion) {
+                            let paradaMasCercana = null;
+                            let distanciaMinima = Infinity;
+
+                            data.paradas.forEach(p => {
+                                const d = distancia(miUbicacion.lat, miUbicacion.lng, Number(p.lat), Number(p.lng));
+                                if (d < distanciaMinima) {
+                                    distanciaMinima = d;
+                                    paradaMasCercana = p;
+                                }
+                            });
+
+                            const umbralKm = 2.0;
+                            if (distanciaMinima <= umbralKm) {
+                                dibujarRutaUsuario(
+                                    miUbicacion.lat,
+                                    miUbicacion.lng,
+                                    Number(paradaMasCercana.lat),
+                                    Number(paradaMasCercana.lng)
+                                );
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert("Ocurrió un error al buscar la zona");
+                    });
+            };
+
+            // Procesar origen: manual o geolocalización
+            if (origenInput) {
+                geocoder.geocode({ address: origenInput }, (results, status) => {
+                    if (status === "OK" && results[0]) {
+                        const loc = results[0].geometry.location;
+                        procesarUbicacion(loc.lat(), loc.lng());
+                    } else {
+                        alert("No se pudo localizar el origen escrito");
+                    }
+                });
+            } else if (miUbicacion) {
+                procesarUbicacion(miUbicacion.lat, miUbicacion.lng);
+            } else {
+                alert("Primero permite que se obtenga tu ubicación o escribe un origen");
+            }
+        }
+
+    </script>
+
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places&callback=inicializarMapa">
+        </script>
+</body>
+
+</html>

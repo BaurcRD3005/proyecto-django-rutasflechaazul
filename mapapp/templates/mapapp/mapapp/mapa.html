@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Interactivo - Flecha Azul</title>
+
+    <!-- GOOGLE FONTS -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- FONT AWESOME -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --azul-primario: #1e40af;
+            --azul-secundario: #2563eb;
+            --azul-suave: #dbeafe;
+            --acento-verde: #10b981;
+            --acento-oro: #f59e0b;
+            --gris-claro: #e5e7eb;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Open Sans', sans-serif;
+            background: #f3f4f6;
+        }
+
+        header {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        header h1 {
+            margin: 0;
+            color: var(--azul-primario);
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .hero {
+            background: linear-gradient(rgba(30,64,175,0.9), rgba(30,64,175,0.85));
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .map-container {
+            margin: 3rem 0;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        #map {
+            width: 100%;
+            height: 600px;
+        }
+
+        .legend {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-top: 2rem;
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            background: var(--azul-primario);
+            color: white;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Flecha Azul</h1>
+</header>
+
+<section class="hero">
+    <div class="container">
+        <h2>Mapa Interactivo de Ruta</h2>
+        <p>Explora el recorrido completo desde Tlaxcala hasta Puebla</p>
+    </div>
+</section>
+
+<div class="container">
+
+    <div class="map-container">
+        <div id="map"></div>
+    </div>
+
+</div>
+
+<footer>
+    © 2026 Flecha Azul - Todos los derechos reservados
+</footer>
+
+{{ ubicaciones|json_script:"ubicaciones-data" }}
+{{ rutas|json_script:"rutas-data" }}
+
+<script>
+function inicializarMapa() {
+
+    const ubicaciones = JSON.parse(
+        document.getElementById('ubicaciones-data').textContent
+    );
+
+    const rutas = JSON.parse(
+        document.getElementById('rutas-data').textContent
+    );
+
+    const map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 11,
+        center: ubicaciones['tlaxcala']
+    });
+
+    rutas.forEach(ruta => {
+
+        let coordenadasRuta = [];
+
+        ruta.paradas.forEach(key => {
+
+            const parada = ubicaciones[key];
+
+            coordenadasRuta.push({
+                lat: parada.lat,
+                lng: parada.lng
+            });
+
+            new google.maps.Marker({
+                position: { lat: parada.lat, lng: parada.lng },
+                map: map,
+                title: parada.nombre
+            });
+
+        });
+
+        new google.maps.Polyline({
+            path: coordenadasRuta,
+            strokeColor: ruta.color,
+            strokeWeight: 5
+        }).setMap(map);
+
+    });
+}
+</script>
+
+<script>
+function initMap() {
+
+    const ubicaciones = JSON.parse(
+        document.getElementById('ubicaciones-data').textContent
+    );
+
+    const rutas = JSON.parse(
+        document.getElementById('rutas-data').textContent
+    );
+
+    const map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 13,
+        center: ubicaciones['tlaxcala']
+    });
+
+    const directionsService = new google.maps.DirectionsService();
+
+    rutas.forEach(ruta => {
+
+        const directionsRenderer = new google.maps.DirectionsRenderer({
+            suppressMarkers: false,
+            polylineOptions: {
+                strokeColor: ruta.color,
+                strokeWeight: 6
+            }
+        });
+
+        directionsRenderer.setMap(map);
+
+        const paradasCoords = ruta.paradas.map(key => ({
+            location: {
+                lat: ubicaciones[key].lat,
+                lng: ubicaciones[key].lng
+            },
+            stopover: false
+        }));
+
+        directionsService.route({
+            origin: paradasCoords[0].location,
+            destination: paradasCoords[paradasCoords.length - 1].location,
+            waypoints: paradasCoords.slice(1, -1),
+            travelMode: google.maps.TravelMode.DRIVING
+        }, function(result, status) {
+            if (status === "OK") {
+                directionsRenderer.setDirections(result);
+            } else {
+                console.error("Error en ruta:", status);
+            }
+        });
+
+    });
+}
+</script>
+
+<script async defer
+src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&callback=initMap">
+</script>
+
+</body>
+</html>
