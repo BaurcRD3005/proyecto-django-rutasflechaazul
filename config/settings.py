@@ -86,18 +86,13 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+import dj_database_url
+import os
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'bd_fa',   # ← el nombre que creaste en phpMyAdmin
-        'USER': 'root',
-        'PASSWORD': '',            # En XAMPP normalmente está vacío
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-         'OPTIONS': {
-            'sql_mode': 'STRICT_TRANS_TABLES',
-        }
-    }
+    'default': dj_database_url.config(
+        default=os.getenv("DATABASE_URL")
+    )
 }
 
 
