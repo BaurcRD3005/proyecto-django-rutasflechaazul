@@ -31,9 +31,9 @@ GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 SECRET_KEY = 'django-insecure-^9bxziyldx**z&n+8&88^ej*i*gqcwm*pqw+7(s*2fhj4st2^)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['rutas-flecha-azul.onrender.com']
 
 
 # Application definition
