@@ -31,9 +31,9 @@ GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 SECRET_KEY = 'django-insecure-^9bxziyldx**z&n+8&88^ej*i*gqcwm*pqw+7(s*2fhj4st2^)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ['rutas-flecha-azul.onrender.com']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -86,14 +86,18 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-import dj_database_url
-import os
-
 DATABASES = {
-    "default": dj_database_url.config(
-        conn_max_age=600,
-        ssl_require=True
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'bd_fa',   # ← el nombre que creaste en phpMyAdmin
+        'USER': 'root',
+        'PASSWORD': '',            # En XAMPP normalmente está vacío
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
+         'OPTIONS': {
+            'sql_mode': 'STRICT_TRANS_TABLES',
+        }
+    }
 }
 
 
