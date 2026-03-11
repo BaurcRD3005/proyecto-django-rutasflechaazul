@@ -77,7 +77,7 @@
     function inicializarMapa() {
 
         mapa = new google.maps.Map(
-            document.getElementById("map"),
+            document.getElementById("mapa"),
             {
                 center: { lat: 19.3167, lng: -98.2390 },
                 zoom: 14
@@ -96,6 +96,7 @@
         inicializarEventosMapa();
     }
 
+    window.inicializarMapa = inicializarMapa;
 
     /* ===============================
        CLICK MAPA → NO CREAR PARADAS
