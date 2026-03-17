@@ -388,6 +388,11 @@
                 <i class="fas fa-clock sidebar-icon"></i>
                 <span class="sidebar-text">Gestión de Horarios</span>
             </a>
+            <a href="{% url 'admin_tarifas' %}"
+                class="sidebar-link {% if request.resolver_match.url_name == 'admin_tarifas' %}active{% endif %}">
+                <i class="fas fa-clock sidebar-icon"></i>
+                <span class="sidebar-text">Gestión de Tarifas</span>
+            </a>
         </nav>
 
         <!-- BOTÓN CERRAR SESIÓN -->

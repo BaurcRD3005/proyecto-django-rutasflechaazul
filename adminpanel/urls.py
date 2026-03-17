@@ -10,10 +10,14 @@ urlpatterns = [
     path("crear_parada/", views.crear_parada, name="crear_parada"),
     path("crear_ruta/", views.crear_ruta, name="crear_ruta"),
     path("horarios/", views.horarios_admin, name="admin_horarios"),
-    path("crear_horario/", views.crear_horario),
+    path("crear_horario/", views.crear_horario , name="crear_horario"),
     path("eliminar_horario/<int:id>/", views.eliminar_horario),
     path("eliminar_ruta/<int:id>/", views.eliminar_ruta, name="eliminar_ruta"),
     path("editar_ruta/<int:id>/", views.editar_ruta, name="editar_ruta"),
     path('eliminar_parada/', views.eliminar_parada, name='eliminar_parada'),
     path("editar_horario/<int:id>/", views.editar_horario),
-]
+    path("tarifas/", views.tarifas_admin, name="admin_tarifas"),
+    path("crear_tarifa/", views.crear_tarifa, name="crear_tarifa"),
+    path("editar_tarifa/<int:id>/", views.editar_tarifa, name="editar_tarifa"),
+    path("eliminar_tarifa/<int:id>/", views.eliminar_tarifa, name="eliminar_tarifa")
+    ]

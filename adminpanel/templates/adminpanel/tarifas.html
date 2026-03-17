@@ -1,0 +1,264 @@
+{% extends "adminpanel/base_admin.html" %}
+
+{% block title %}Gestión de Tarifas - Flecha Azul{% endblock %}
+{% block page_title %}Gestión de Tarifas{% endblock %}
+
+{% block content %}
+
+<style>
+    .schedules-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .schedules-table th {
+        background: #1e40af;
+        color: white;
+        padding: 12px;
+        text-align: left;
+    }
+
+    .schedules-table td {
+        padding: 12px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .schedules-table tr:hover {
+        background: #f1f5f9;
+    }
+</style>
+
+<!-- JSON DATA -->
+{{ tarifas_json|json_script:"tarifas-data" }}
+{{ paradas_ruta_json|json_script:"paradas-ruta-data" }}
+
+<div class="chart-card">
+
+    <div class="chart-header">
+        <h3 class="chart-title">Crear Tarifa</h3>
+    </div>
+
+    <!-- FORMULARIO -->
+    <div style="margin-bottom:1rem">
+
+        <select id="ruta" class="table-search">
+            <option value="">Ruta</option>
+            {% for r in rutas %}
+            <option value="{{ r.id }}">{{ r.nombre }}</option>
+            {% endfor %}
+        </select>
+
+        <select id="origen" class="table-search">
+            <option value="">Origen</option>
+            {% for p in paradas %}
+            <option value="{{ p.id }}">{{ p.nombre }}</option>
+            {% endfor %}
+        </select>
+
+        <select id="destino" class="table-search">
+            <option value="">Destino</option>
+            {% for p in paradas %}
+            <option value="{{ p.id }}">{{ p.nombre }}</option>
+            {% endfor %}
+        </select>
+
+        <input type="number" id="tarifa" placeholder="Tarifa" class="table-search">
+        <input type="number" id="descuento" placeholder="Descuento" class="table-search">
+
+        <button type="button" onclick="crearTarifa()" class="btn btn-primary">
+            Guardar
+        </button>
+
+    </div>
+
+    <!-- TABLA -->
+    <table class="schedules-table">
+        <thead>
+            <tr>
+                <th>Ruta</th>
+                <th>Origen</th>
+                <th>Destino</th>
+                <th>Tarifa</th>
+                <th>Descuento</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody id="tablaTarifas">
+            {% for t in tarifas %}
+            <tr id="fila{{t.id}}">
+                <td>{{t.ruta.nombre}}</td>
+                <td>{{t.origen.nombre}}</td>
+                <td>{{t.destino.nombre}}</td>
+                <td>${{t.tarifa}}</td>
+                <td>${{t.descuento}}</td>
+                <td>
+                    <button class="btnEditar" data-id="{{t.id}}">
+                        Editar
+                    </button>
+                    <button class="btnEliminar" data-id="{{t.id}}">
+                        Eliminar
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js_scripts %}
+<script>
+
+    const tarifasData = JSON.parse(
+        document.getElementById("tarifas-data").textContent
+    );
+
+    const paradasRuta = JSON.parse(
+        document.getElementById("paradas-ruta-data").textContent
+    );
+
+    function getCookie(name) {
+        let cookieValue = null;
+
+        if (document.cookie && document.cookie !== "") {
+            document.cookie.split(";").forEach(c => {
+                c = c.trim();
+
+                if (c.startsWith(name + "=")) {
+                    cookieValue = decodeURIComponent(
+                        c.substring(name.length + 1)
+                    );
+                }
+            });
+        }
+
+        return cookieValue;
+    }
+
+    function crearTarifa() {
+
+        const ruta = document.getElementById("ruta").value;
+        const origen = document.getElementById("origen").value;
+        const destino = document.getElementById("destino").value;
+
+        if (!ruta || !origen || !destino) {
+            alert("Selecciona ruta, origen y destino");
+            return;
+        }
+
+        let url = "/admin-panel/crear_tarifa/";
+
+        if (window.tarifaEditando) {
+            url = "/admin-panel/editar_tarifa/" + window.tarifaEditando + "/";
+        }
+
+        fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken")
+            },
+            body: JSON.stringify({
+                ruta: ruta,
+                origen: origen,
+                destino: destino,
+                tarifa: document.getElementById("tarifa").value,
+                descuento: document.getElementById("descuento").value
+            })
+        })
+            .then(r => r.json())
+            .then(data => {
+                location.reload();
+            });
+    }
+
+    function eliminarTarifa(id) {
+
+        fetch("/admin-panel/eliminar_tarifa/" + id + "/", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getCookie("csrftoken")
+            }
+        })
+            .then(r => r.json())
+            .then(data => {
+
+                if (data.status === "ok") {
+
+                    const fila = document.getElementById("fila" + id);
+                    if (fila) fila.remove();
+
+                } else {
+                    alert("Error al eliminar tarifa");
+                }
+
+            });
+
+    }
+
+    document.querySelectorAll(".btnEliminar").forEach(btn => {
+
+        btn.addEventListener("click", function () {
+
+            const id = this.dataset.id;
+            eliminarTarifa(id);
+
+        });
+
+    });
+
+    document.querySelectorAll(".btnEditar").forEach(btn => {
+
+        btn.addEventListener("click", function () {
+
+            const id = this.dataset.id;
+
+            const tarifa = tarifasData.find(t => t.id == id);
+
+            if (!tarifa) return;
+
+            document.getElementById("ruta").value = tarifa.ruta;
+            document.getElementById("origen").value = tarifa.origen;
+            document.getElementById("destino").value = tarifa.destino;
+
+            document.getElementById("tarifa").value = tarifa.tarifa;
+            document.getElementById("descuento").value = tarifa.descuento;
+
+            window.tarifaEditando = id;
+
+        });
+
+    });
+
+    document.getElementById("ruta").addEventListener("change", function () {
+
+        const rutaId = this.value;
+
+        const origenSelect = document.getElementById("origen");
+        const destinoSelect = document.getElementById("destino");
+
+        origenSelect.innerHTML = "<option value=''>Origen</option>";
+        destinoSelect.innerHTML = "<option value=''>Destino</option>";
+
+        if (!paradasRuta[rutaId]) return;
+
+        paradasRuta[rutaId].forEach(p => {
+
+            const option1 = document.createElement("option");
+            option1.value = p.id;
+            option1.textContent = p.nombre;
+
+            const option2 = option1.cloneNode(true);
+
+            origenSelect.appendChild(option1);
+            destinoSelect.appendChild(option2);
+
+        });
+
+    });
+
+</script>
+{% endblock %}

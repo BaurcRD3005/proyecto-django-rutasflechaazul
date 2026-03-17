@@ -39,6 +39,12 @@
             </div>
             <span>Modificar Horarios</span>
         </a>
+        <a href="{% url 'admin_tarifas' %}" class="action-btn">
+            <div class="action-icon">
+                <i class="fas fa-edit"></i>
+            </div>
+            <span>Modificar Tarifas</span>
+        </a>
     </div>
 </div>
 
@@ -46,12 +52,6 @@
 <div class="admin-table-container">
     <div class="table-header">
         <h3>Actividad Reciente</h3>
-        <div class="table-actions">
-            <input type="text" class="table-search" placeholder="Buscar consulta...">
-            <button class="btn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-                <i class="fas fa-filter"></i> Filtrar
-            </button>
-        </div>
     </div>
 
     <table class="admin-table">
@@ -70,8 +70,8 @@
                 <td>{{ actividad.id }}</td>
                 <td>{{ actividad.usuario.get_full_name|default:actividad.usuario.username }}</td>
                 <td>{{ actividad.get_accion_display }}</td>
-                <td>{{ actividad.fecha }}</td>
-                <td>{{ actividad.hora|time:"H:i:s" }}</td>
+                <td>{{ actividad.fecha|date:"d F Y" }}</td>
+                <td>{{ actividad.hora|time:"H:i A" }}</td>
             </tr>
             {% empty %}
             <tr>

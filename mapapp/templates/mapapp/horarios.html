@@ -300,6 +300,14 @@
                 -webkit-print-color-adjust: exact;
             }
         }
+
+        .search-zones {
+            margin: 50px 0;
+            padding: 25px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
     </style>
 </head>
 
@@ -321,7 +329,6 @@
                         <li><a href="{% url 'mapa' %}" class="nav-link">Mapa</a></li>
                         <li><a href="{% url 'horarios' %}" class="nav-link active">Horarios</a></li>
                         <li><a href="{% url 'zonas' %}" class="nav-link">Zonas</a></li>
-                        <li><a href="{% url 'admin_login' %}" class="btn btn-secondary">Admin</a></li>
                     </ul>
                 </nav>
 
@@ -341,7 +348,6 @@
                 <p class="hero-subtitle" style="color:#ffffff;">
                     Consulta los horarios actualizados y tarifas para tus viajes con Flecha Azul.
                 </p>
-
             </div>
         </div>
     </section>
@@ -349,30 +355,23 @@
     <!-- CONTENIDO PRINCIPAL -->
     <div class="container">
         <!-- FILTROS -->
-         <div class="filters-container">
+        <div class="filters-container">
 
-    <div class="filter-group">
-        <label class="filter-label">Filtrar por ruta:</label>
-        <select class="filter-select" id="filterRuta">
-            <option value="all">Todas las rutas</option>
-        </select>
-    </div>
+            <div class="filter-group">
+                <label class="filter-label">Origen:</label>
+                <select class="filter-select" id="filterOrigen">
+                    <option value="all">Todos los orígenes</option>
+                </select>
+            </div>
 
-    <div class="filter-group">
-        <label class="filter-label">Origen:</label>
-        <select class="filter-select" id="filterOrigen">
-            <option value="all">Todos los orígenes</option>
-        </select>
-    </div>
+            <div class="filter-group">
+                <label class="filter-label">Destino:</label>
+                <select class="filter-select" id="filterDestino">
+                    <option value="all">Todos los destinos</option>
+                </select>
+            </div>
 
-    <div class="filter-group">
-        <label class="filter-label">Destino:</label>
-        <select class="filter-select" id="filterDestino">
-            <option value="all">Todos los destinos</option>
-        </select>
-    </div>
-
-</div>
+        </div>
 
         <!-- NOTA IMPORTANTE -->
         <div class="note-container">
@@ -389,6 +388,7 @@
         <!-- TABLA DE HORARIOS -->
         <div class="table-container">
             <table class="schedules-table" id="schedulesTable">
+
                 <thead>
                     <tr>
                         <th><i class="fas fa-map-marker-alt"></i> Origen</th>
@@ -396,6 +396,7 @@
                         <th><i class="fas fa-clock"></i> Primer Viaje</th>
                         <th><i class="fas fa-clock"></i> Último Viaje</th>
                         <th><i class="fas fa-sync-alt"></i> Frecuencia</th>
+                        <th><i class="fas fa-bus"></i> Próxima Salida Del Origen</th>
                         <th><i class="fas fa-tag"></i> Tarifa</th>
                         <th><i class="fas fa-tags"></i> Descuento</th>
                         <th><i class="fas fa-route"></i> Ruta</th>
@@ -403,48 +404,68 @@
                 </thead>
 
                 <tbody id="tableBody">
+
+                    {% for h in horarios %}
+
                     <tr>
 
+                        <!-- ORIGEN -->
                         <td>{{ h.origen.nombre }}</td>
 
+                        <!-- DESTINO -->
                         <td>{{ h.destino.nombre }}</td>
 
+                        <!-- PRIMER VIAJE -->
                         <td>
                             <span class="time-cell">
                                 {{ h.primer_viaje }}
                             </span>
                         </td>
 
+                        <!-- ULTIMO VIAJE -->
                         <td>
                             <span class="time-cell">
                                 {{ h.ultimo_viaje }}
                             </span>
                         </td>
 
+                        <!-- FRECUENCIA -->
                         <td>
                             <span class="frequency-badge">
-                                {{ h.frecuencia }}
+                                {{ h.frecuencia }} min
                             </span>
                         </td>
 
+                        <!-- PROXIMA SALIDA (JS) -->
+                        <td>
+                            <span class="time-cell">
+                                Calculando...
+                            </span>
+                        </td>
+
+                        <!-- TARIFA -->
                         <td>
                             <span class="price-tag">
                                 ${{ h.tarifa }}
                             </span>
                         </td>
 
+                        <!-- DESCUENTO -->
                         <td>
                             <span class="price-tag" style="background: linear-gradient(135deg,#8b5cf6,#a78bfa);">
                                 ${{ h.descuento }}
                             </span>
                         </td>
 
+                        <!-- RUTA -->
                         <td>
                             <i class="fas fa-bus"></i>
                             {{ h.ruta.nombre }}
                         </td>
 
                     </tr>
+
+                    {% endfor %}
 
                 </tbody>
 
@@ -541,7 +562,7 @@
         </div>
     </div>
 
-        <!-- FOOTER -->
+    <!-- FOOTER -->
     <footer class="footer">
         <div class="container">
             <!-- HORARIOS Y DIRECCIÓN CON ICONOS CENTRADOS -->
@@ -552,7 +573,8 @@
                 </span>
                 <span class="separator" style="color: rgba(255,255,255,0.8); font-weight: bold;">|</span>
                 <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
-                    <i class="fas fa-map-marker-alt"></i> 72090, Av. 10 Pte. 113, San Miguelito, Heroica Puebla de Zaragoza, Pue.
+                    <i class="fas fa-map-marker-alt"></i> 72090, Av. 10 Pte. 113, San Miguelito, Heroica Puebla de
+                    Zaragoza, Pue.
                 </span>
             </div>
 
@@ -574,159 +596,147 @@
     <!-- JavaScript -->
     <script>
 
-document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function () {
 
-    const horarios = JSON.parse(
-    document.getElementById("horarios-data").textContent
-);
+            // ===== DATOS =====
+            const horarios = JSON.parse(
+                document.getElementById("horarios-data").textContent
+            );
 
-    // Elementos DOM
-    const tableBody = document.getElementById('tableBody');
+            // Variable global para filtrar
+            let filtrados = [...horarios];
 
-    const fechaActualizacion = document.getElementById('fechaActualizacion');
+            // ===== ELEMENTOS DOM =====
+            const tableBody = document.getElementById('tableBody');
+            const fechaActualizacion = document.getElementById('fechaActualizacion');
+            const filterOrigen = document.getElementById("filterOrigen");
+            const filterDestino = document.getElementById("filterDestino");
 
-    const filterRuta = document.getElementById("filterRuta");
-    const filterOrigen = document.getElementById("filterOrigen");
-    const filterDestino = document.getElementById("filterDestino");
+            // ===== FUNCIONES =====
 
-function cargarTabla(datos){
+            // Convierte "HH:MM:SS" a formato 12h con a.m./p.m.
+            function formatearHora12(hora24) {
+                const [h, m] = hora24.split(":").map(Number);
+                const fecha = new Date();
+                fecha.setHours(h, m, 0);
+                return fecha.toLocaleTimeString('es-MX', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            }
 
-    tableBody.innerHTML = "";
+            function cargarTabla(datos) {
+                tableBody.innerHTML = "";
 
-    if(!Array.isArray(datos)) return;
+                datos.forEach(h => {
+                    const proxima = calcularProximaSalida(
+                        h.primer_viaje,
+                        h.ultimo_viaje,
+                        parseInt(h.frecuencia)
+                    );
 
-    datos.forEach(h =>{
+                    tableBody.innerHTML += `
+                    <tr>
+                        <td>${h.origen__nombre}</td>
+                        <td>${h.destino__nombre}</td>
+                        <td><span class="time-cell">${formatearHora12(h.primer_viaje)}</span></td>
+                        <td><span class="time-cell">${formatearHora12(h.ultimo_viaje)}</span></td>
+                        <td><span class="frequency-badge">${h.frecuencia} min</span></td>
+                        <td><span class="time-cell">${proxima}</span></td>
+                        <td><span class="price-tag">$${h.tarifa}</span></td>
+                        <td><span class="price-tag" style="background: linear-gradient(135deg,#8b5cf6,#a78bfa);">$${h.descuento}</span></td>
+                        <td><i class="fas fa-bus"></i> ${h.ruta__nombre}</td>
+                    </tr>
+                `;
+                });
+            }
 
-        tableBody.innerHTML += `
-        <tr>
-            <td>${h.origen__nombre}</td>
-            <td>${h.destino__nombre}</td>
+            function cargarFiltros(datos) {
+                if (!Array.isArray(datos)) return;
 
-            <td>
-                <span class="time-cell">
-                    ${h.primer_viaje}
-                </span>
-            </td>
+                const origenes = [...new Set(datos.map(d => d.origen__nombre))];
+                const destinos = [...new Set(datos.map(d => d.destino__nombre))];
 
-            <td>
-                <span class="time-cell">
-                    ${h.ultimo_viaje}
-                </span>
-            </td>
+                origenes.forEach(o => {
+                    if (o) filterOrigen.innerHTML += `<option value="${o}">${o}</option>`;
+                });
 
-            <td>
-                <span class="frequency-badge">
-                    ${h.frecuencia}
-                </span>
-            </td>
+                destinos.forEach(d => {
+                    if (d) filterDestino.innerHTML += `<option value="${d}">${d}</option>`;
+                });
+            }
 
-            <td>
-                <span class="price-tag">
-                    $${h.tarifa}
-                </span>
-            </td>
+            function aplicarFiltros() {
+                filtrados = [...horarios];
 
-            <td>
-                <span class="price-tag" style="background: linear-gradient(135deg,#8b5cf6,#a78bfa);">
-                    $${h.descuento}
-                </span>
-            </td>
+                if (filterOrigen.value !== "all") {
+                    filtrados = filtrados.filter(h => h.origen__nombre === filterOrigen.value);
+                }
 
-            <td>
-                <i class="fas fa-bus"></i>
-                ${h.ruta__nombre}
-            </td>
-        </tr>
-        `;
-    });
-}
+                if (filterDestino.value !== "all") {
+                    filtrados = filtrados.filter(h => h.destino__nombre === filterDestino.value);
+                }
 
-    // ===== FECHAS =====
-    const hoy = new Date();
-    const siguienteMes = new Date();
-    siguienteMes.setMonth(hoy.getMonth() + 1);
+                cargarTabla(filtrados);
+            }
 
-    fechaActualizacion.textContent = hoy.toLocaleDateString('es-MX',{
-        year:'numeric',
-        month:'long',
-        day:'numeric'
-    });
+            function calcularProximaSalida(primerViaje, ultimoViaje, frecuencia) {
+                const ahora = new Date();
+                const [h1, m1] = primerViaje.split(":").map(Number);
+                const [h2, m2] = ultimoViaje.split(":").map(Number);
 
-    // ===== EVENTOS FILTROS =====
-    [filterRuta, filterOrigen, filterDestino].forEach(select=>{
-        select.addEventListener("change", aplicarFiltros);
-    });
+                let inicio = new Date();
+                inicio.setHours(h1, m1, 0);
 
-    // ===== HEADER SCROLL =====
-    window.addEventListener('scroll', function () {
-        const header = document.getElementById('header');
-        if (window.scrollY > 50) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
-        }
-    });
+                let fin = new Date();
+                fin.setHours(h2, m2, 0);
 
-    // ===== FUNCIONES =====
+                let salida = new Date(inicio);
 
-    function cargarFiltros(datos){
+                while (salida <= fin) {
+                    if (salida > ahora) {
+                        return salida.toLocaleTimeString('es-MX', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                        });
+                    }
+                    salida.setMinutes(salida.getMinutes() + frecuencia);
+                }
 
-    if(!Array.isArray(datos)) return;
+                return "Finalizado";
+            }
 
-    const rutas = [...new Set(datos.map(d => d.ruta__nombre))];
-    const origenes = [...new Set(datos.map(d => d.origen__nombre))];
-    const destinos = [...new Set(datos.map(d => d.destino__nombre))];
+            // ===== FECHA DE ACTUALIZACIÓN =====
+            const hoy = new Date();
+            fechaActualizacion.textContent = hoy.toLocaleDateString('es-MX', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
 
-    rutas.forEach(r=>{
-        if(r){
-            filterRuta.innerHTML += `<option value="${r}">${r}</option>`;
-        }
-    });
+            // ===== CARGAR FILTROS Y TABLA =====
+            cargarFiltros(horarios);
+            cargarTabla(filtrados);
 
-    origenes.forEach(o=>{
-        if(o){
-            filterOrigen.innerHTML += `<option value="${o}">${o}</option>`;
-        }
-    });
+            // ===== EVENTOS FILTROS =====
+            [filterOrigen, filterDestino].forEach(select => {
+                select.addEventListener("change", aplicarFiltros);
+            });
 
-    destinos.forEach(d=>{
-        if(d){
-            filterDestino.innerHTML += `<option value="${d}">${d}</option>`;
-        }
-    });
-}
+            // ===== HEADER SCROLL =====
+            window.addEventListener('scroll', function () {
+                const header = document.getElementById('header');
+                if (window.scrollY > 50) {
+                    header.classList.add('scrolled');
+                } else {
+                    header.classList.remove('scrolled');
+                }
+            });
 
-    function aplicarFiltros(){
-
-    let filtrados = [...horarios];
-
-    if(filterRuta.value !== "all"){
-        filtrados = filtrados.filter(h =>
-            h.ruta__nombre === filterRuta.value
-        );
-    }
-
-    if(filterOrigen.value !== "all"){
-        filtrados = filtrados.filter(h =>
-            h.origen__nombre === filterOrigen.value
-        );
-    }
-
-    if(filterDestino.value !== "all"){
-        filtrados = filtrados.filter(h =>
-            h.destino__nombre === filterDestino.value
-        );
-    }
-}
-
-cargarFiltros(horarios);
-cargarTabla(horarios);
-
-});
-
-
-
-</script>
+        });
+    </script>
 </body>
 
 </html>

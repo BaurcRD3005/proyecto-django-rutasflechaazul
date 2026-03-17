@@ -273,7 +273,6 @@
                         <li><a href="{% url 'mapa' %}" class="nav-link active">Mapa</a></li>
                         <li><a href="{% url 'horarios' %}" class="nav-link">Horarios</a></li>
                         <li><a href="{% url 'zonas' %}" class="nav-link">Zonas</a></li>
-                        <li><a href="{% url 'admin_login' %}" class="btn btn-secondary">Admin</a></li>
                     </ul>
                 </nav>
             </div>
@@ -290,11 +289,8 @@
                     <i class="fas fa-map-marker-alt" style="color:red; margin-left:5px;"></i>
                 </p>
                 <div class="mt-3">
-                    <a href="#mapa" class="btn btn-primary">
-                        <i class="fas fa-map"></i> Ver Mapa
-                    </a>
                     <a href="#paradas" class="btn" style="background: rgba(255,255,255,0.2); color: white;">
-                        <i class="fas fa-list"></i> Ver Paradas
+                        <i class="fas fa-list"></i> Ver Rutas
                     </a>
                 </div>
             </div>
@@ -317,6 +313,12 @@
                 <!-- IMAGEN DEL MAPA -->
                 <div id="map" style="width:100%; height:500px;"></div>
             </div>
+        </div>
+
+        <div style="display:flex; justify-content:center; margin:20px 0;">
+            <button class="btn btn-primary" onclick="mostrarTodasRutas()">
+                <i class="fas fa-map"></i> Ver todas las rutas
+            </button>
         </div>
 
         <!-- LISTA DE PARADAS -->
@@ -363,13 +365,17 @@
 
     <!-- JavaScript -->
     <script>
+
+        let mapa;
+        let rutasMapa = [];
+
         function inicializarMapa() {
 
             const rutas = JSON.parse(
                 document.getElementById("rutas-data").textContent
             );
 
-            const mapa = new google.maps.Map(
+            mapa = new google.maps.Map(
                 document.getElementById("map"),
                 {
                     zoom: 11,
@@ -377,33 +383,54 @@
                 }
             );
 
-            const bounds = new google.maps.LatLngBounds();
-
             rutas.forEach(ruta => {
 
                 if (!ruta.paradas) return;
 
-                // ===== DIBUJAR RUTA =====
-                const path = ruta.paradas.map(p => {
+                let bounds = new google.maps.LatLngBounds();
+                let path = [];
 
-                    const pos = {
-                        lat: Number(p.lat),
-                        lng: Number(p.lng)
-                    };
+                if (ruta.coordenadas && ruta.coordenadas.length > 0) {
 
-                    bounds.extend(pos);
+                    path = ruta.coordenadas.map(p => {
 
-                    return pos;
-                });
+                        const pos = {
+                            lat: Number(p.lat),
+                            lng: Number(p.lng)
+                        };
 
-                new google.maps.Polyline({
+                        bounds.extend(pos);
+                        return pos;
+
+                    });
+
+                } else {
+
+                    path = ruta.paradas.map(p => {
+
+                        const pos = {
+                            lat: Number(p.lat),
+                            lng: Number(p.lng)
+                        };
+
+                        bounds.extend(pos);
+                        return pos;
+
+                    });
+
+                }
+
+                // POLYLINE
+                const polyline = new google.maps.Polyline({
                     path: path,
                     strokeColor: ruta.color || "#2563eb",
                     strokeWeight: 5,
                     map: mapa
                 });
 
-                // ===== MARCADORES DE PARADAS =====
+                // MARCADORES
+                let marcadores = [];
+
                 ruta.paradas.forEach(parada => {
 
                     const position = {
@@ -417,13 +444,12 @@
                         title: parada.nombre
                     });
 
-                    // InfoWindow
                     const info = new google.maps.InfoWindow({
                         content: `
-                    <div style="padding:10px">
-                        <h4>${parada.nombre}</h4>
-                        <p>Ruta: ${ruta.nombre || ""}</p>
-                    </div>
+                <div style="padding:10px">
+                    <h4>${parada.nombre}</h4>
+                    <p>Ruta: ${ruta.nombre || ""}</p>
+                </div>
                 `
                     });
 
@@ -431,17 +457,107 @@
                         info.open(mapa, marker);
                     });
 
+                    marcadores.push(marker);
+
+                });
+
+                rutasMapa.push({
+                    nombre: ruta.nombre,
+                    horario: ruta.horario,
+                    frecuencia: ruta.frecuencia,
+                    color: ruta.color,
+                    polyline: polyline,
+                    marcadores: marcadores,
+                    bounds: bounds
                 });
 
             });
 
-            window.inicializarMapa = inicializarMapa;
+            // ===== CENTRAR MAPA EN TODAS LAS RUTAS =====
 
-            mapa.fitBounds(bounds);
+            let boundsGeneral = new google.maps.LatLngBounds();
+
+            rutasMapa.forEach(r => {
+
+                const path = r.polyline.getPath();
+
+                for (let i = 0; i < path.getLength(); i++) {
+
+                    boundsGeneral.extend(path.getAt(i));
+
+                }
+
+            });
+
+            mapa.fitBounds(boundsGeneral);
 
             crearTarjetasRutas(rutas);
 
             document.getElementById("mapLoading").style.display = "none";
+        }
+
+        function mostrarRuta(index) {
+
+            // ocultar todas las rutas
+            rutasMapa.forEach(r => {
+
+                r.polyline.setMap(null);
+
+                r.marcadores.forEach(m => {
+                    m.setMap(null);
+                });
+
+            });
+
+            const ruta = rutasMapa[index];
+
+            // mostrar ruta seleccionada
+            ruta.polyline.setMap(mapa);
+
+            ruta.marcadores.forEach(m => {
+                m.setMap(mapa);
+            });
+
+            // tomar parada de enmedio
+            const total = ruta.marcadores.length;
+            const medio = Math.floor(total / 2);
+
+            const paradaCentral = ruta.marcadores[medio].getPosition();
+
+            // mover mapa a esa parada
+            mapa.panTo(paradaCentral);
+
+            // zoom fuerte
+            setTimeout(() => {
+                mapa.setZoom(17);
+            }, 300);
+
+        }
+
+        function mostrarTodasRutas() {
+
+            let boundsGeneral = new google.maps.LatLngBounds();
+
+            rutasMapa.forEach(r => {
+
+                r.polyline.setMap(mapa);
+
+                r.marcadores.forEach(m => {
+                    m.setMap(mapa);
+                });
+
+                const path = r.polyline.getPath();
+
+                for (let i = 0; i < path.getLength(); i++) {
+
+                    boundsGeneral.extend(path.getAt(i));
+
+                }
+
+            });
+
+            mapa.fitBounds(boundsGeneral);
+
         }
 
         function crearTarjetasRutas(rutas) {
@@ -455,55 +571,65 @@
 
                 card.innerHTML = `
 
-            <div class="stop-header">
+<div class="stop-header">
 
-                <div class="stop-number">
-                    ${index + 1}
-                </div>
+    <div class="stop-number">
+        ${index + 1}
+    </div>
 
-                <span class="stop-type">
-                    RUTA
-                </span>
+    <span class="stop-type">
+        RUTA
+    </span>
 
-            </div>
+</div>
 
-            <h4>
-                <i class="fas fa-route"></i>
-                ${ruta.nombre}
-            </h4>
+<h4>
+<i class="fas fa-route"></i>
+${ruta.nombre}
+</h4>
 
-            <p style="color: var(--gris-medio); margin:0.5rem 0;">
-                <i class="fas fa-clock"></i>
-                ${ruta.horario}
-            </p>
+<p style="color: var(--gris-medio); margin:0.5rem 0;">
+<i class="fas fa-clock"></i>
+${ruta.horario || "Horario no disponible"}
+</p>
 
-            <div class="stop-schedule">
+<div class="stop-schedule">
 
-                <div>
-                    <small>Frecuencia</small>
-                    <p style="font-weight:600;color: var(--gris-medio);font-size:0.95rem;">
-                        ${ruta.frecuencia}
-                    </p>
-                </div>
+    <div>
+        <small>Frecuencia</small>
+        <p style="font-weight:600;color: var(--gris-medio);font-size:0.95rem;">
+            ${ruta.frecuencia || "No disponible"}
+        </p>
+    </div>
 
-                <div>
-                    <small>Color Ruta</small>
-                    <p style="font-weight:600;">
-                        <span style="
-                            display:inline-block;
-                            width:18px;
-                            height:18px;
-                            border-radius:50%;
-                            background:${ruta.color};
-                        "></span>
-                    </p>
-                </div>
+    <div>
+        <small>Color Ruta</small>
+        <p style="font-weight:600;">
+            <span style="
+                display:inline-block;
+                width:18px;
+                height:18px;
+                border-radius:50%;
+                background:${ruta.color || "#2563eb"};
+            "></span>
+        </p>
+    </div>
 
-            </div>
+</div>
 
-        `;
+<button class="btn btn-primary btn-ver-ruta">
+<i class="fas fa-search-plus"></i> Ver cerca
+</button>
 
+`;
                 contenedor.appendChild(card);
+
+                card.querySelector(".btn-ver-ruta").addEventListener("click", (e) => {
+
+                    e.stopPropagation();
+                    mostrarRuta(index);
+
+                });
 
             });
 

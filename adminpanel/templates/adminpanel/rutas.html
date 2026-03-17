@@ -5,6 +5,50 @@
 
 {% block content %}
 
+<style>
+    .schedules-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .schedules-table th {
+        background: #1e40af;
+        color: white;
+        padding: 12px;
+        text-align: left;
+    }
+
+    .schedules-table td {
+        padding: 12px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .schedules-table tr:hover {
+        background: #f1f5f9;
+    }
+
+    .color-picker {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 10px 0;
+    }
+
+    .color-box {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: 0.2s;
+    }
+
+    .color-box.active {
+        border: 2px solid black;
+        transform: scale(1.1);
+    }
+</style>
+
 <div class="chart-card">
     <h3>Crear Ruta</h3>
 
@@ -13,10 +57,22 @@
     <h4>Color</h4>
 
     <div class="color-picker">
-        <div class="color-box active" style="background:#ff0000" data-color="#ff0000"></div>
-        <div class="color-box" style="background:#2563eb" data-color="#2563eb"></div>
-        <div class="color-box" style="background:#16a34a" data-color="#16a34a"></div>
-        <div class="color-box" style="background:#9333ea" data-color="#9333ea"></div>
+
+        <div class="color-box active" style="background:#ef4444" data-color="#ef4444"></div> <!-- rojo -->
+        <div class="color-box" style="background:#2563eb" data-color="#2563eb"></div> <!-- azul -->
+        <div class="color-box" style="background:#16a34a" data-color="#16a34a"></div> <!-- verde -->
+        <!--  <div class="color-box" style="background:#9333ea" data-color="#9333ea"></div> morado -->
+
+        <div class="color-box" style="background:#f59e0b" data-color="#f59e0b"></div> <!-- naranja -->
+        <div class="color-box" style="background:#ec4899" data-color="#ec4899"></div> <!-- rosa -->
+        <div class="color-box" style="background:#14b8a6" data-color="#14b8a6"></div> <!-- turquesa -->
+        <!--  <div class="color-box" style="background:#6366f1" data-color="#6366f1"></div> índigo -->
+
+        <div class="color-box" style="background:#84cc16" data-color="#84cc16"></div> <!-- lima -->
+        <div class="color-box" style="background:#f97316" data-color="#f97316"></div> <!-- naranja fuerte -->
+        <div class="color-box" style="background:#0ea5e9" data-color="#0ea5e9"></div> <!-- celeste -->
+        <div class="color-box" style="background:#a855f7" data-color="#a855f7"></div> <!-- violeta -->
+
     </div>
 
     <button class="btn btn-primary" onclick="guardarRuta()">
@@ -32,7 +88,7 @@
 <div class="chart-card">
     <h3>Rutas existentes</h3>
 
-    <table class="table">
+    <table class="schedules-table">
         <thead>
             <tr>
                 <th>Nombre</th>
@@ -87,13 +143,38 @@
         polyline = new google.maps.Polyline({
             map: mapa,
             strokeColor: colorRuta,
-            strokeWeight: 5
+            strokeWeight: 5,
+            editable: true
         });
 
-        inicializarColorPicker();
         cargarParadas();
         cargarRutasTabla();
         inicializarEventosMapa();
+        inicializarColorPicker();
+    }
+
+    /* ===============================
+       COLOR PICKER
+    =============================== */
+
+    function seleccionarColor(color) {
+
+        colorRuta = color;
+
+        polyline.setOptions({
+            strokeColor: colorRuta
+        });
+
+        document.querySelectorAll(".color-box").forEach(box => {
+
+            box.classList.remove("active");
+
+            if (box.dataset.color.toLowerCase() === color.toLowerCase()) {
+                box.classList.add("active");
+            }
+
+        });
+
     }
 
 
@@ -150,12 +231,30 @@
 
         if (!polyline) return;
 
-        polyline.setPath(
-            paradasRuta.map(p => ({
-                lat: p.lat,
-                lng: p.lng
-            }))
-        );
+        const path = polyline.getPath();
+
+        if (paradasRuta.length === 1 && path.getLength() === 0) {
+
+            path.push(
+                new google.maps.LatLng(
+                    paradasRuta[0].lat,
+                    paradasRuta[0].lng
+                )
+            );
+
+        } else {
+
+            const ultima = paradasRuta[paradasRuta.length - 1];
+
+            path.push(
+                new google.maps.LatLng(
+                    ultima.lat,
+                    ultima.lng
+                )
+            );
+
+        }
+
     }
 
 
@@ -182,6 +281,31 @@
         });
     }
 
+    /* ===============================
+    Guardar los vértices de la polyline
+    =============================== */
+
+
+    function obtenerPathPolyline() {
+
+        let path = polyline.getPath();
+
+        let puntos = [];
+
+        for (let i = 0; i < path.getLength(); i++) {
+
+            let p = path.getAt(i);
+
+            puntos.push({
+                lat: p.lat(),
+                lng: p.lng()
+            });
+
+        }
+
+        return puntos;
+    }
+
 
     /* ===============================
        GUARDAR RUTA
@@ -194,32 +318,56 @@
             return;
         }
 
-        // Si estamos editando, usamos la URL de edición; si no, la de crear
         let url = "/admin-panel/crear_ruta/";
+
         if (rutaEditando) {
             url = `/admin-panel/editar_ruta/${rutaEditando}/`;
         }
 
         fetch(url, {
+
             method: "POST",
+
             headers: {
                 "Content-Type": "application/json",
                 "X-CSRFToken": getCookie("csrftoken")
             },
+
             body: JSON.stringify({
+
                 nombre: document.getElementById("nombreRuta").value,
+
                 color: colorRuta,
-                paradas: paradasRuta.map(p => ({ id: p.id }))
+
+                paradas: paradasRuta.map(p => ({
+                    id: p.id
+                })),
+
+                coordenadas: obtenerPathPolyline()
+
             })
+
         })
-            .then(res => res.json())
+        
+            .then(res => {
+                if (!res.ok) throw new Error("Error servidor");
+                return res.json();
+            })
+
             .then(data => {
+
                 if (data.ok) {
+
                     alert("Ruta guardada correctamente ✅");
-                    location.reload(); // recarga la tabla y el mapa
+
+                    location.reload();
+
                 } else {
+
                     alert("Error al guardar la ruta");
+
                 }
+
             });
     }
 
@@ -244,7 +392,12 @@
             tdNombre.textContent = r.nombre;
 
             let tdColor = document.createElement("td");
+
             let color = document.createElement("div");
+            color.style.width = "20px";
+            color.style.height = "20px";
+            color.style.borderRadius = "4px";
+            color.style.background = r.color;
 
             tdColor.appendChild(color);
 
@@ -285,6 +438,7 @@
     function mostrarRuta(ruta) {
 
         limpiarRutaActual();
+        seleccionarColor(ruta.color);
 
         paradasRuta = ruta.paradas.map(p => ({
             id: p.id,
@@ -292,10 +446,34 @@
             lng: parseFloat(p.lng)
         }));
 
-        dibujarLineaSimple();
+        // Si la ruta tiene coordenadas guardadas
+        if (ruta.coordenadas && ruta.coordenadas.length > 0) {
+
+            polyline.setPath(
+                ruta.coordenadas.map(p => ({
+                    lat: parseFloat(p.lat),
+                    lng: parseFloat(p.lng)
+                }))
+            );
+
+        } else {
+
+            // si no tiene, dibuja recta
+            polyline.setPath(
+                paradasRuta.map(p => ({
+                    lat: p.lat,
+                    lng: p.lng
+                }))
+            );
+
+        }
+
         mapFitBounds();
     }
 
+    /* ===============================
+       EDITAR RUTA
+    =============================== */
 
     function editarRuta(ruta) {
 
@@ -305,11 +483,7 @@
 
         document.getElementById("nombreRuta").value = ruta.nombre;
 
-        colorRuta = ruta.color;
-
-        polyline.setOptions({
-            strokeColor: colorRuta
-        });
+        seleccionarColor(ruta.color);
 
         paradasRuta = ruta.paradas.map(p => ({
             id: p.id,
@@ -317,7 +491,26 @@
             lng: parseFloat(p.lng)
         }));
 
-        dibujarLineaSimple();
+        // cargar coordenadas reales de la ruta
+        if (ruta.coordenadas && ruta.coordenadas.length > 0) {
+
+            polyline.setPath(
+                ruta.coordenadas.map(p => ({
+                    lat: parseFloat(p.lat),
+                    lng: parseFloat(p.lng)
+                }))
+            );
+
+        } else {
+
+            polyline.setPath(
+                paradasRuta.map(p => ({
+                    lat: p.lat,
+                    lng: p.lng
+                }))
+            );
+
+        }
 
         mapFitBounds();
     }
@@ -429,6 +622,40 @@
             }
         }).then(() => location.reload());
     }
+
+
+    /* ===============================
+   DESHACER ÚLTIMA PARADA (CTRL+Z)
+================================ */
+
+    function deshacerUltimaParada() {
+
+        if (paradasRuta.length === 0) return;
+
+        paradasRuta.pop();
+
+        const path = polyline.getPath();
+
+        if (path.getLength() > 0) {
+            path.pop();
+        }
+    }
+
+    /* ===============================
+   EVENTO CTRL + Z
+================================ */
+
+    document.addEventListener("keydown", function (e) {
+
+        if (e.ctrlKey && e.key.toLowerCase() === "z") {
+
+            e.preventDefault(); // evita que el navegador haga otra cosa
+
+            deshacerUltimaParada();
+
+        }
+
+    });
 
 </script>
 

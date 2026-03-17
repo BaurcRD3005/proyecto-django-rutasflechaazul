@@ -1,3 +1,8 @@
 from django.contrib import admin
+from .models import Ruta, Parada, RutaParada, HorarioRuta, ActividadReciente
 
-# Register your models here.
+admin.site.register(Ruta)
+admin.site.register(Parada)
+admin.site.register(RutaParada)
+admin.site.register(HorarioRuta)
+admin.site.register(ActividadReciente)

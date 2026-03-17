@@ -10,7 +10,8 @@ from .models import (
     Ruta,
     RutaParada,
     HorarioRuta,
-    ActividadReciente
+    TarifaRuta,
+    ActividadReciente,
 )
 
 
@@ -62,19 +63,34 @@ def login_view(request):
 
 @login_required
 def paradas(request):
-
     paradas = Parada.objects.all()
+    rutas = Ruta.objects.prefetch_related("ruta_paradas__parada")
+
+    rutas_json = [
+        {
+            "id": r.id,
+            "nombre": r.nombre,
+            "color": getattr(r, "color", "#ff0000"),
+            "paradas": [
+                {
+                    "id": rp.parada.id,
+                    "nombre": rp.parada.nombre,
+                    "lat": rp.parada.lat,
+                    "lng": rp.parada.lng,
+                    "orden": rp.orden
+                }
+                for rp in r.ruta_paradas.all().order_by("orden")
+            ]
+        }
+        for r in rutas
+    ]
 
     return render(request, "adminpanel/paradas.html", {
         "paradas": [
-            {
-                "id": p.id,
-                "nombre": p.nombre,
-                "lat": p.lat,
-                "lng": p.lng
-            }
+            {"id": p.id, "nombre": p.nombre, "lat": p.lat, "lng": p.lng}
             for p in paradas
         ],
+        "rutas": rutas_json,
         "GOOGLE_MAPS_API_KEY": settings.GOOGLE_MAPS_API_KEY
     })
 
@@ -150,6 +166,11 @@ def rutas(request):
                 "id": r.id,
                 "nombre": r.nombre,
                 "color": r.color,
+                "coordenadas": (
+                    json.loads(r.coordenadas)
+                    if isinstance(r.coordenadas, str)
+                    else r.coordenadas
+                    ) if r.coordenadas else [],
                 "paradas": [
                     {
                         "id": rp.parada.id,
@@ -185,9 +206,17 @@ def crear_ruta(request):
 
         data = json.loads(request.body)
 
+        coords = data.get("coordenadas", [])
+        if isinstance(coords, str):
+            try:
+                coords = json.loads(coords)
+            except:
+                coords = []
+                
         ruta = Ruta.objects.create(
-            nombre=data["nombre"],
-            color=data.get("color", "#ff0000")
+                nombre=data["nombre"],
+                color=data.get("color", "#ff0000"),
+                coordenadas=json.dumps(coords)
         )
 
         for index, p in enumerate(data["paradas"]):
@@ -214,34 +243,56 @@ def editar_ruta(request, id):
 
     if request.method == "POST":
 
-        data = json.loads(request.body)
+        try:
 
-        ruta = Ruta.objects.get(id=id)
+            data = json.loads(request.body)
 
-        ruta.nombre = data["nombre"]
-        ruta.color = data["color"]
-        ruta.save()
+            ruta = Ruta.objects.get(id=id)
 
-        RutaParada.objects.filter(ruta=ruta).delete()
+            ruta.nombre = data["nombre"]
+            ruta.color = data["color"]
+            coords = data.get("coordenadas", [])
+            if isinstance(coords, str):
+                try:
+                    coords = json.loads(coords)
+                except:
+                    coords = []
 
-        for index, p in enumerate(data["paradas"]):
+            ruta.coordenadas = json.dumps(coords)
 
-            parada = Parada.objects.get(id=p["id"])
+            ruta.save()
 
-            RutaParada.objects.create(
-                ruta=ruta,
-                parada=parada,
-                orden=index
+            RutaParada.objects.filter(ruta=ruta).delete()
+
+            for index, p in enumerate(data["paradas"]):
+                
+                parada_id = p.get("id")
+                
+                if not parada_id:
+                    continue
+
+                parada = Parada.objects.get(id=p["id"])
+
+                RutaParada.objects.create(
+                    ruta=ruta,
+                    parada=parada,
+                    orden=index
+                )
+
+            ActividadReciente.objects.create(
+                usuario=request.user,
+                accion="edit_ruta",
+                descripcion=f"Se editó la ruta {ruta.nombre}"
             )
 
-        ActividadReciente.objects.create(
-            usuario=request.user,
-            accion="edit_ruta",
-            descripcion=f"Se editó la ruta {ruta.nombre}"
-        )
+            return JsonResponse({"ok": True})
 
-        return JsonResponse({"ok": True})
-
+        except Exception as e:
+            return JsonResponse({
+                "ok": False,
+                "error": str(e)
+            }, status=500)
+            
 
 @login_required
 def eliminar_ruta(request, id):
@@ -270,9 +321,11 @@ def eliminar_ruta(request, id):
 def horarios_admin(request):
 
     horarios = HorarioRuta.objects.select_related("ruta", "origen", "destino")
-    paradas = Parada.objects.all()
-    rutas = Ruta.objects.all()
 
+    rutas = Ruta.objects.all()
+    paradas = Parada.objects.all()
+
+    # horarios json
     horarios_json = [
         {
             "id": h.id,
@@ -282,17 +335,31 @@ def horarios_admin(request):
             "primer_viaje": str(h.primer_viaje),
             "ultimo_viaje": str(h.ultimo_viaje),
             "frecuencia": h.frecuencia,
-            "tarifa": h.tarifa,
-            "descuento": h.descuento
         }
         for h in horarios
     ]
+
+    # ⭐ paradas por ruta
+    paradas_ruta = {}
+
+    for rp in RutaParada.objects.select_related("parada", "ruta").order_by("orden"):
+
+        ruta_id = rp.ruta.id
+
+        if ruta_id not in paradas_ruta:
+            paradas_ruta[ruta_id] = []
+
+        paradas_ruta[ruta_id].append({
+            "id": rp.parada.id,
+            "nombre": rp.parada.nombre
+        })
 
     return render(request, "adminpanel/horarios_admin.html", {
         "horarios": horarios,
         "paradas": paradas,
         "rutas": rutas,
-        "horarios_json": horarios_json
+        "horarios_json": horarios_json,
+        "paradas_ruta_json": paradas_ruta
     })
 
 @login_required
@@ -313,8 +380,6 @@ def crear_horario(request):
             primer_viaje=data["primer_viaje"],
             ultimo_viaje=data["ultimo_viaje"],
             frecuencia=data["frecuencia"],
-            tarifa=data["tarifa"],
-            descuento=data["descuento"],
         )
 
         ActividadReciente.objects.create(
@@ -361,8 +426,6 @@ def editar_horario(request, id):
         horario.ultimo_viaje = data["ultimo_viaje"]
 
         horario.frecuencia = data["frecuencia"]
-        horario.tarifa = data["tarifa"]
-        horario.descuento = data["descuento"]
 
         horario.save()
 
@@ -374,3 +437,132 @@ def editar_horario(request, id):
         )
 
         return JsonResponse({"ok": True})
+    
+# ==============================
+# TARIFAS
+# ==============================
+
+@login_required
+def tarifas_admin(request):
+
+    tarifas = TarifaRuta.objects.select_related("ruta", "origen", "destino")
+    paradas = Parada.objects.all().order_by("nombre")
+    rutas = Ruta.objects.all()
+
+    tarifas_json = [
+        {
+            "id": t.id,
+            "ruta": t.ruta.id,
+            "origen": t.origen.id,
+            "destino": t.destino.id,
+            "tarifa": float(t.tarifa),
+            "descuento": float(t.descuento),
+        }
+        for t in tarifas
+    ]
+
+    # ⭐ paradas por ruta
+    paradas_ruta = {}
+
+    for rp in RutaParada.objects.select_related("parada", "ruta").order_by("orden"):
+
+        ruta_id = rp.ruta.id
+
+        if ruta_id not in paradas_ruta:
+            paradas_ruta[ruta_id] = []
+
+        paradas_ruta[ruta_id].append({
+            "id": rp.parada.id,
+            "nombre": rp.parada.nombre
+        })
+
+    return render(request, "adminpanel/tarifas.html", {
+        "tarifas": tarifas,
+        "paradas": paradas,
+        "rutas": rutas,
+        "tarifas_json": tarifas_json,
+        "paradas_ruta_json": paradas_ruta
+    })
+    
+@login_required
+def crear_tarifa(request):
+
+    if request.method == "POST":
+
+        data = json.loads(request.body)
+
+        ruta = Ruta.objects.get(id=data["ruta"])
+        origen = Parada.objects.get(id=data["origen"])
+        destino = Parada.objects.get(id=data["destino"])
+
+        tarifa = TarifaRuta.objects.create(
+            ruta=ruta,
+            origen=origen,
+            destino=destino,
+            tarifa=data["tarifa"],
+            descuento=data.get("descuento", 0)
+        )
+
+        ActividadReciente.objects.create(
+            usuario=request.user,
+            accion="add_tarifa",
+            descripcion=f"Se agregó tarifa a la ruta {ruta.nombre}"
+        )
+
+        return JsonResponse({
+            "status": "ok",
+            "id": tarifa.id
+        })
+        
+@login_required
+def editar_tarifa(request, id):
+
+    if request.method == "POST":
+
+        data = json.loads(request.body)
+
+        tarifa = TarifaRuta.objects.get(id=id)
+
+        tarifa.ruta_id = data["ruta"]
+        tarifa.origen_id = data["origen"]
+        tarifa.destino_id = data["destino"]
+
+        tarifa.tarifa = data["tarifa"]
+        tarifa.descuento = data["descuento"]
+
+        tarifa.save()
+
+        ActividadReciente.objects.create(
+            usuario=request.user,
+            accion="edit_tarifa",
+            descripcion=f"Se editó tarifa de la ruta {tarifa.ruta.nombre}"
+        )
+
+        return JsonResponse({"ok": True})
+    
+@login_required
+def eliminar_tarifa(request, id):
+
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Método no permitido"})
+
+    try:
+        tarifa = TarifaRuta.objects.get(id=id)
+
+        ActividadReciente.objects.create(
+            usuario=request.user,
+            accion="delete_tarifa",
+            descripcion=f"Se eliminó tarifa de la ruta {tarifa.ruta.nombre}"
+        )
+
+        tarifa.delete()
+
+        return JsonResponse({"status": "ok"})
+
+    except TarifaRuta.DoesNotExist:
+
+        return JsonResponse({
+            "status": "error",
+            "message": "Tarifa no encontrada"
+        })
+        

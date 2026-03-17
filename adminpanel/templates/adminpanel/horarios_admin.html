@@ -31,6 +31,7 @@
 <!-- JSON DATA SAFE (PROFESIONAL WAY ⭐) -->
 {{ horarios_json|json_script:"horarios-data" }}
 {{ paradas_json|json_script:"paradas-data" }}
+{{ paradas_ruta_json|json_script:"paradas-ruta-data" }}
 
 
 <div class="chart-card">
@@ -65,11 +66,7 @@
 
         <input type="time" id="primer_viaje" class="table-search">
         <input type="time" id="ultimo_viaje" class="table-search">
-
         <input type="text" id="frecuencia" placeholder="Frecuencia" class="table-search">
-        <input type="number" id="tarifa" placeholder="Tarifa" class="table-search">
-        <input type="number" id="descuento" placeholder="Descuento" class="table-search">
-
         <button type="button" onclick="crearHorario()" class="btn btn-primary">
             Guardar
         </button>
@@ -85,7 +82,6 @@
                 <th>Primer Viaje</th>
                 <th>Último Viaje</th>
                 <th>Frecuencia</th>
-                <th>Tarifa</th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -98,7 +94,6 @@
                 <td>{{h.primer_viaje}}</td>
                 <td>{{h.ultimo_viaje}}</td>
                 <td>{{h.frecuencia}}</td>
-                <td>${{h.tarifa}}</td>
                 <td>
                     <button class="btnEditar" data-id="{{h.id}}">
                         Editar
@@ -129,6 +124,37 @@
     const paradasData = JSON.parse(
         document.getElementById("paradas-data").textContent
     );
+
+    const paradasRuta = JSON.parse(
+        document.getElementById("paradas-ruta-data").textContent
+    );
+
+    document.getElementById("ruta").addEventListener("change", function () {
+
+        const rutaId = this.value;
+
+        const origenSelect = document.getElementById("origen");
+        const destinoSelect = document.getElementById("destino");
+
+        origenSelect.innerHTML = "<option value=''>Origen</option>";
+        destinoSelect.innerHTML = "<option value=''>Destino</option>";
+
+        if (!paradasRuta[rutaId]) return;
+
+        paradasRuta[rutaId].forEach(p => {
+
+            const option1 = document.createElement("option");
+            option1.value = p.id;
+            option1.textContent = p.nombre;
+
+            const option2 = option1.cloneNode(true);
+
+            origenSelect.appendChild(option1);
+            destinoSelect.appendChild(option2);
+
+        });
+
+    });
 
     /* ==========================
     CSRF
@@ -181,8 +207,6 @@
                 primer_viaje: document.getElementById("primer_viaje").value,
                 ultimo_viaje: document.getElementById("ultimo_viaje").value,
                 frecuencia: document.getElementById("frecuencia").value,
-                tarifa: document.getElementById("tarifa").value,
-                descuento: document.getElementById("descuento").value,
             })
         })
             .then(r => r.json())
@@ -197,7 +221,7 @@
     function eliminarHorario(id) {
 
         fetch("/admin-panel/eliminar_horario/" + id + "/", {
-            method: "DELETE",
+            method: "POST",
             headers: {
                 "X-CSRFToken": getCookie("csrftoken")
             }
@@ -238,10 +262,7 @@
 
             document.getElementById("primer_viaje").value = horario.primer_viaje;
             document.getElementById("ultimo_viaje").value = horario.ultimo_viaje;
-
             document.getElementById("frecuencia").value = horario.frecuencia;
-            document.getElementById("tarifa").value = horario.tarifa;
-            document.getElementById("descuento").value = horario.descuento;
 
             // guardamos id del horario que se edita
             window.horarioEditando = id;
