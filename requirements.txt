@@ -1,7 +1,6 @@
 ﻿asgiref==3.11.1
 Django==4.2.16
 gunicorn==25.1.0
-mysqlclient==2.2.8
 packaging==26.0
 python-dotenv==1.2.1
 sqlparse==0.5.5
@@ -9,4 +8,7 @@ tzdata==2025.3
 whitenoise==6.12.0
 dj-database-url==2.2.0
 psycopg2-binary==2.9.9
+dj-database-url
+psycopg2-binary
+
 
