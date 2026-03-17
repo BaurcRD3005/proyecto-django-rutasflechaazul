@@ -10,30 +10,26 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-from importlib.resources import path
 from pathlib import Path
+import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# import os
-#from dotenv import load_dotenv
-
-#load_dotenv(BASE_DIR / ".env")
-
+# Google Maps API Key (definida en Render)
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-^9bxziyldx**z&n+8&88^ej*i*gqcwm*pqw+7(s*2fhj4st2^)'
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-default-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -73,7 +69,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-
                 'config.context_processors.google_maps_api',
             ],
         },
@@ -85,8 +80,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
-import dj_database_url
+# Render usa DATABASE_URL, dj_database_url lo parsea automáticamente
 
 DATABASES = {
     "default": dj_database_url.config(conn_max_age=600)
@@ -132,17 +126,18 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Login URLs
 LOGIN_URL = '/admin-panel/login/'
 LOGIN_REDIRECT_URL = '/admin-panel/dashboard/'
 LOGOUT_REDIRECT_URL = '/admin-panel/login/'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+# Email backend (opcional)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-STATIC_URL = '/static/'
-
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
