@@ -142,5 +142,3 @@ LOGOUT_REDIRECT_URL = '/admin-panel/login/'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-puedes corregirlo pls
