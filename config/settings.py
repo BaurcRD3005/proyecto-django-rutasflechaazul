@@ -82,13 +82,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 # Render usa DATABASE_URL, dj_database_url lo parsea automáticamente
 
-import dj_database_url
-
 DATABASES = {
-    "default": dj_database_url.config(
+    "default": dj_database_url.parse(
+        os.getenv("DATABASE_URL"),
         conn_max_age=600
     )
 }
+
+DATABASES['default']['ENGINE'] = 'django.db.backends.mysql'
 
 
 # Password validation
