@@ -81,28 +81,38 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-<<<<<<< HEAD
 # Render usa DATABASE_URL, dj_database_url lo parsea automáticamente
 
-DATABASES = {
-    "default": dj_database_url.parse(
-        os.getenv("DATABASE_URL"),
-        conn_max_age=600
-    )
-=======
+from dotenv import load_dotenv
+import os
+import pymysql
 
+# Cargar variables de entorno desde .env
+load_dotenv()
 
+# Permite usar PyMySQL como MySQLdb
+pymysql.install_as_MySQLdb()
+
+# Configuración de la base de datos
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'bd_fa',
-        'USER': 'root',
-        'PASSWORD': '',  # si no tienes contraseña
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT', '3306'),
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
     }
->>>>>>> 579cc80 (Mensaje describiendo los cambios)
 }
+
+# Clave secreta de Django
+SECRET_KEY = os.getenv('SECRET_KEY')
+
+# Google Maps API Key
+GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY')
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
