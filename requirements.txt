@@ -7,8 +7,4 @@ sqlparse==0.5.5
 tzdata==2025.3
 whitenoise==6.12.0
 dj-database-url==2.2.0
-<<<<<<< HEAD
 PyMySQL==1.1.1
-=======
-PyMySQL==1.1.1
->>>>>>> 579cc80 (Mensaje describiendo los cambios)
