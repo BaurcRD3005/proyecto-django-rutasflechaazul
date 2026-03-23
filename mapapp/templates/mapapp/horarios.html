@@ -569,7 +569,7 @@
             <div class="footer-center-text"
                 style="display: flex; justify-content: center; align-items: center; gap: 1rem; width: 100%; margin-bottom: 1.5rem; font-size: 1rem; color: rgba(255,255,255,0.8);">
                 <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
-                    <i class="fas fa-clock"></i> Lun - SAB: 5:30 AM - 11:30 PM | DOM: 6:30 AM - 10:30 PM
+                    <i class="fas fa-clock"></i> Lunes - Domingos de 5:00 AM a 10:45 PM
                 </span>
                 <span class="separator" style="color: rgba(255,255,255,0.8); font-weight: bold;">|</span>
                 <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
@@ -638,15 +638,15 @@
 
                     tableBody.innerHTML += `
                     <tr>
-                        <td>${h.origen__nombre}</td>
-                        <td>${h.destino__nombre}</td>
+                        <td>${h.origen}</td>
+                        <td>${h.destino}</td>
                         <td><span class="time-cell">${formatearHora12(h.primer_viaje)}</span></td>
                         <td><span class="time-cell">${formatearHora12(h.ultimo_viaje)}</span></td>
                         <td><span class="frequency-badge">${h.frecuencia} min</span></td>
                         <td><span class="time-cell">${proxima}</span></td>
                         <td><span class="price-tag">$${h.tarifa}</span></td>
                         <td><span class="price-tag" style="background: linear-gradient(135deg,#8b5cf6,#a78bfa);">$${h.descuento}</span></td>
-                        <td><i class="fas fa-bus"></i> ${h.ruta__nombre}</td>
+                        <td><i class="fas fa-bus"></i> ${h.ruta}</td>
                     </tr>
                 `;
                 });
@@ -655,8 +655,8 @@
             function cargarFiltros(datos) {
                 if (!Array.isArray(datos)) return;
 
-                const origenes = [...new Set(datos.map(d => d.origen__nombre))];
-                const destinos = [...new Set(datos.map(d => d.destino__nombre))];
+                const origenes = [...new Set(datos.map(d => d.origen))];
+                const destinos = [...new Set(datos.map(d => d.destino))];
 
                 origenes.forEach(o => {
                     if (o) filterOrigen.innerHTML += `<option value="${o}">${o}</option>`;
@@ -671,11 +671,11 @@
                 filtrados = [...horarios];
 
                 if (filterOrigen.value !== "all") {
-                    filtrados = filtrados.filter(h => h.origen__nombre === filterOrigen.value);
+                    filtrados = filtrados.filter(h => h.origen === filterOrigen.value);
                 }
 
                 if (filterDestino.value !== "all") {
-                    filtrados = filtrados.filter(h => h.destino__nombre === filterDestino.value);
+                    filtrados = filtrados.filter(h => h.destino === filterDestino.value);
                 }
 
                 cargarTabla(filtrados);

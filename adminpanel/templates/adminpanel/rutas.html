@@ -47,6 +47,64 @@
         border: 2px solid black;
         transform: scale(1.1);
     }
+
+    .schedules-table {
+        width: 100%;
+        border-collapse: separate;
+        /* importante para que funcione border-radius */
+        border-spacing: 0;
+        /* evita espacios entre celdas */
+        border-radius: var(--radio-borde);
+        /* bordes redondeados */
+        overflow: hidden;
+        /* para que no sobresalgan las celdas */
+        min-width: 800px;
+    }
+
+    .schedules-table th,
+    .schedules-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--gris-claro);
+    }
+
+    .schedules-table th {
+        background: linear-gradient(135deg, var(--azul-primario), var(--azul-secundario));
+        color: white;
+    }
+
+    .schedules-table tbody tr:hover {
+        background: var(--azul-suave);
+    }
+
+    /* Bordes redondeados de las esquinas de la tabla */
+    .schedules-table th:first-child {
+        border-top-left-radius: var(--radio-borde);
+    }
+
+    .schedules-table th:last-child {
+        border-top-right-radius: var(--radio-borde);
+    }
+
+    .schedules-table tbody tr:last-child td:first-child {
+        border-bottom-left-radius: var(--radio-borde);
+    }
+
+    .schedules-table tbody tr:last-child td:last-child {
+        border-bottom-right-radius: var(--radio-borde);
+    }
+
+    .chart-card {
+        background: white;
+        /* ya debería estar, para sobresalir */
+        padding: 1.5rem;
+        /* espacio interno */
+        margin-bottom: 1.5rem;
+        /* separación entre contenedores */
+        border-radius: var(--radio-borde);
+        /* esquinas redondeadas */
+        box-shadow: var(--sombra-suave);
+        /* sombra suave */
+    }
 </style>
 
 <div class="chart-card">
@@ -88,17 +146,18 @@
 <div class="chart-card">
     <h3>Rutas existentes</h3>
 
-    <table class="schedules-table">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Color</th>
-                <th>Acción</th>
-            </tr>
-        </thead>
-
-        <tbody id="tablaRutas"></tbody>
-    </table>
+    <div class="table-container">
+        <table class="schedules-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Color</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="tablaRutas"></tbody>
+        </table>
+    </div>
 </div>
 
 {% endblock %}
@@ -345,7 +404,7 @@
             })
 
         })
-        
+
             .then(res => {
                 if (!res.ok) throw new Error("Error servidor");
                 return res.json();
@@ -385,35 +444,39 @@
 
             let tr = document.createElement("tr");
 
+            // NOMBRE DE RUTA
             let tdNombre = document.createElement("td");
             tdNombre.textContent = r.nombre;
 
+            // COLOR
             let tdColor = document.createElement("td");
-
-            let color = document.createElement("div");
+            let color = document.createElement("span");
+            color.style.display = "inline-block";
             color.style.width = "20px";
             color.style.height = "20px";
-            color.style.borderRadius = "4px";
+            color.style.borderRadius = "50%";
             color.style.background = r.color;
-
             tdColor.appendChild(color);
 
+            // ACCIÓN
             let tdAccion = document.createElement("td");
 
             let btnVer = document.createElement("button");
             btnVer.textContent = "Ver";
+            btnVer.className = "btn btn-primary";
+            btnVer.style.marginRight = "8px";
             btnVer.onclick = () => mostrarRuta(r);
 
             let btnEditar = document.createElement("button");
             btnEditar.textContent = "Editar";
+            btnEditar.className = "btn btn-primary";
+            btnEditar.style.marginRight = "8px";
             btnEditar.onclick = () => editarRuta(r);
 
             let btnEliminar = document.createElement("button");
             btnEliminar.textContent = "Eliminar";
+            btnEliminar.className = "btn btn-danger";
             btnEliminar.onclick = () => eliminarRuta(r.id);
-
-            btnVer.style.marginRight = "8px";
-            btnEditar.style.marginRight = "8px";
 
             tdAccion.appendChild(btnVer);
             tdAccion.appendChild(btnEditar);
@@ -656,8 +719,16 @@
 
 </script>
 
+<<<<<<< HEAD
 <script async defer 
 src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&callback=inicializarMapa&libraries=geometry,drawing,marker">
 </script>
 
 {% endblock %}
+=======
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&callback=inicializarMapa&libraries=geometry,drawing,marker">
+    </script>
+
+{% endblock %}
+>>>>>>> 579cc80 (Mensaje describiendo los cambios)

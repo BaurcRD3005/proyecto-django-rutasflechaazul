@@ -6,73 +6,206 @@
 {% block content %}
 
 <style>
+    /* Mismos estilos que en Tarifas */
+    .chart-card h3 {
+        font-weight: bold;
+        color: var(--negro);
+        margin-bottom: 1rem;
+    }
+    
+    .chart-card h4 {
+        font-weight: bold;
+        color: var(--azul-secundario);
+        margin-bottom: 0.5rem;
+    }
+    
     .schedules-table {
         width: 100%;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
+        border-radius: var(--radio-borde);
+        overflow: hidden;
+        min-width: 800px;
     }
-
-    .schedules-table th {
-        background: #1e40af;
-        color: white;
-        padding: 12px;
-        text-align: left;
-    }
-
+    
+    .schedules-table th,
     .schedules-table td {
-        padding: 12px;
-        border-bottom: 1px solid #ddd;
+        padding: 1rem;
+        border-bottom: 1px solid var(--gris-claro);
+        font-weight: bold;
     }
-
-    .schedules-table tr:hover {
-        background: #f1f5f9;
+    
+    .schedules-table th {
+        background: linear-gradient(135deg, var(--azul-primario), var(--azul-secundario));
+        color: white;
+    }
+    
+    .schedules-table tbody tr:hover {
+        background: var(--azul-suave);
+    }
+    
+    .schedules-table th:first-child {
+        border-top-left-radius: var(--radio-borde);
+    }
+    
+    .schedules-table th:last-child {
+        border-top-right-radius: var(--radio-borde);
+    }
+    
+    .pagination-container {
+        margin-top: 2rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .pagination {
+        display: flex;
+        gap: 0.5rem;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .pagination li {
+        display: inline-block;
+    }
+    
+    .pagination a, .pagination span {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--gris-claro);
+        border-radius: var(--radio-borde);
+        text-decoration: none;
+        color: var(--azul-primario);
+        transition: all 0.3s ease;
+    }
+    
+    .pagination a:hover {
+        background: var(--azul-primario);
+        color: white;
+        border-color: var(--azul-primario);
+    }
+    
+    .pagination .active span {
+        background: var(--azul-primario);
+        color: white;
+        border-color: var(--azul-primario);
+    }
+    
+    .page-size-selector {
+        padding: 0.5rem;
+        border-radius: var(--radio-borde);
+        border: 1px solid var(--gris-claro);
+    }
+    
+    .search-box {
+        margin-bottom: 1rem;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .search-input {
+        padding: 0.5rem;
+        border: 1px solid var(--gris-claro);
+        border-radius: var(--radio-borde);
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .records-info {
+        margin-top: 1rem;
+        text-align: center;
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .alert {
+        padding: 1rem;
+        border-radius: var(--radio-borde);
+        margin-bottom: 1rem;
+        display: none;
+    }
+    
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
     }
 </style>
 
-<!-- JSON DATA SAFE (PROFESIONAL WAY ⭐) -->
+<!-- JSON DATA -->
 {{ horarios_json|json_script:"horarios-data" }}
 {{ paradas_json|json_script:"paradas-data" }}
 {{ paradas_ruta_json|json_script:"paradas-ruta-data" }}
 
-
 <div class="chart-card">
-
     <div class="chart-header">
         <h3 class="chart-title">Crear Horario</h3>
     </div>
-
+    
+    <!-- Alertas -->
+    <div id="alertMessage" class="alert" style="display: none;"></div>
+    
     <!-- FORMULARIO -->
     <div style="margin-bottom:1rem">
-
         <select id="ruta" class="table-search">
-            <option value="">Ruta</option>
+            <option value="">Seleccionar Ruta</option>
             {% for r in rutas %}
             <option value="{{ r.id }}">{{ r.nombre }}</option>
             {% endfor %}
         </select>
-
+        
         <select id="origen" class="table-search">
-            <option value="">Origen</option>
+            <option value="">Seleccionar Origen</option>
             {% for p in paradas %}
             <option value="{{ p.id }}">{{ p.nombre }}</option>
             {% endfor %}
         </select>
-
+        
         <select id="destino" class="table-search">
-            <option value="">Destino</option>
+            <option value="">Seleccionar Destino</option>
             {% for p in paradas %}
             <option value="{{ p.id }}">{{ p.nombre }}</option>
             {% endfor %}
         </select>
-
+        
         <input type="time" id="primer_viaje" class="table-search">
         <input type="time" id="ultimo_viaje" class="table-search">
-        <input type="text" id="frecuencia" placeholder="Frecuencia" class="table-search">
+        <input type="text" id="frecuencia" placeholder="Frecuencia (ej: 30 min)" class="table-search">
         <button type="button" onclick="crearHorario()" class="btn btn-primary">
             Guardar
         </button>
-
+        <button type="button" onclick="cancelarEdicion()" class="btn btn-secondary" id="btnCancelar" style="display: none;">
+            Cancelar
+        </button>
     </div>
-
+    
+    <!-- BÚSQUEDA -->
+    <div class="search-box">
+        <input type="text" id="searchInput" class="search-input" placeholder="Buscar por origen, destino o frecuencia...">
+        <select id="pageSizeSelect" class="page-size-selector">
+            <option value="10">10 por página</option>
+            <option value="25" selected>25 por página</option>
+            <option value="50">50 por página</option>
+            <option value="100">100 por página</option>
+        </select>
+    </div>
+    
     <!-- TABLA -->
     <table class="schedules-table">
         <thead>
@@ -85,191 +218,482 @@
                 <th>Acciones</th>
             </tr>
         </thead>
-
         <tbody id="tablaHorarios">
-            {% for h in horarios %}
-            <tr id="fila{{h.id}}">
-                <td>{{h.origen.nombre}}</td>
-                <td>{{h.destino.nombre}}</td>
-                <td>{{h.primer_viaje}}</td>
-                <td>{{h.ultimo_viaje}}</td>
-                <td>{{h.frecuencia}}</td>
-                <td>
-                    <button class="btnEditar" data-id="{{h.id}}">
-                        Editar
-                    </button>
-                    <button class="btnEliminar" data-id="{{h.id}}">
-                        Eliminar
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
+            <!-- Las filas se cargarán dinámicamente con JavaScript -->
         </tbody>
     </table>
-
+    
+    <!-- PAGINACIÓN -->
+    <div class="pagination-container">
+        <div class="pagination" id="pagination"></div>
+    </div>
+    <div class="records-info" id="recordsInfo"></div>
 </div>
 
 {% endblock %}
 
 {% block extra_js_scripts %}
 <script>
-
-    /* ==========================
-    CARGAR JSON
-    ========================== */
-    const horariosData = JSON.parse(
-        document.getElementById("horarios-data").textContent
-    );
-
-    const paradasData = JSON.parse(
-        document.getElementById("paradas-data").textContent
-    );
-
-    const paradasRuta = JSON.parse(
-        document.getElementById("paradas-ruta-data").textContent
-    );
-
-    document.getElementById("ruta").addEventListener("change", function () {
-
-        const rutaId = this.value;
-
-        const origenSelect = document.getElementById("origen");
-        const destinoSelect = document.getElementById("destino");
-
-        origenSelect.innerHTML = "<option value=''>Origen</option>";
-        destinoSelect.innerHTML = "<option value=''>Destino</option>";
-
-        if (!paradasRuta[rutaId]) return;
-
-        paradasRuta[rutaId].forEach(p => {
-
-            const option1 = document.createElement("option");
-            option1.value = p.id;
-            option1.textContent = p.nombre;
-
-            const option2 = option1.cloneNode(true);
-
-            origenSelect.appendChild(option1);
-            destinoSelect.appendChild(option2);
-
-        });
-
-    });
-
-    /* ==========================
-    CSRF
-    ========================== */
+    // Variables globales
+    let todosLosHorarios = [];
+    let currentPage = 1;
+    let pageSize = 25;
+    let searchTerm = '';
+    let horarioEditando = null;
+    
+    // Función para convertir hora 24h a formato 12h AM/PM
+    function formatTimeToAMPM(time24) {
+        if (!time24) return '';
+        
+        // Si ya viene en formato AM/PM, devolverlo tal cual
+        if (time24.includes('AM') || time24.includes('PM')) {
+            return time24;
+        }
+        
+        // Extraer horas y minutos
+        let [hours, minutes] = time24.split(':');
+        hours = parseInt(hours);
+        
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const hours12 = hours % 12 || 12;
+        
+        return `${hours12.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+    }
+    
+    // Función para mostrar alertas
+    function mostrarAlerta(mensaje, tipo = 'error') {
+        const alertDiv = document.getElementById('alertMessage');
+        alertDiv.textContent = mensaje;
+        alertDiv.className = `alert alert-${tipo}`;
+        alertDiv.style.display = 'block';
+        
+        setTimeout(() => {
+            alertDiv.style.display = 'none';
+        }, 5000);
+    }
+    
+    // Función para cancelar edición
+    function cancelarEdicion() {
+        horarioEditando = null;
+        document.getElementById('btnCancelar').style.display = 'none';
+        document.getElementById('ruta').value = '';
+        document.getElementById('origen').value = '';
+        document.getElementById('destino').value = '';
+        document.getElementById('primer_viaje').value = '';
+        document.getElementById('ultimo_viaje').value = '';
+        document.getElementById('frecuencia').value = '';
+        
+        // Resetear selects de origen y destino
+        const rutaId = document.getElementById('ruta').value;
+        if (rutaId && paradasRuta[rutaId]) {
+            actualizarParadasPorRuta(rutaId);
+        }
+    }
+    
+    // Función para obtener CSRF token
     function getCookie(name) {
         let cookieValue = null;
-        if (document.cookie && document.cookie !== "") {
-            document.cookie.split(";").forEach(c => {
-                c = c.trim();
-                if (c.startsWith(name + "=")) {
-                    cookieValue = decodeURIComponent(
-                        c.substring(name.length + 1)
-                    );
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
                 }
-            });
+            }
         }
         return cookieValue;
     }
-
-    /* ==========================
-    CREAR HORARIO
-    ========================== */
-    function crearHorario() {
-
+    
+    // Función para hacer fetch con manejo de errores
+    async function fetchWithCSRF(url, options = {}) {
+        const csrftoken = getCookie('csrftoken');
+        
+        const defaultOptions = {
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+        };
+        
+        const mergedOptions = { ...defaultOptions, ...options };
+        
+        try {
+            const response = await fetch(url, mergedOptions);
+            
+            if (!response.ok) {
+                if (response.status === 403) {
+                    throw new Error('Error de autenticación. Por favor, recarga la página.');
+                }
+                const text = await response.text();
+                throw new Error(`Error ${response.status}: ${text.substring(0, 100)}`);
+            }
+            
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return await response.json();
+            } else {
+                const text = await response.text();
+                throw new Error('El servidor no respondió con JSON válido');
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            throw error;
+        }
+    }
+    
+    // Cargar datos del JSON
+    let horariosData = [];
+    let paradasData = [];
+    let paradasRuta = {};
+    
+    try {
+        const horariosScript = document.getElementById("horarios-data");
+        const paradasScript = document.getElementById("paradas-data");
+        const paradasRutaScript = document.getElementById("paradas-ruta-data");
+        
+        if (horariosScript && horariosScript.textContent) {
+            horariosData = JSON.parse(horariosScript.textContent);
+            console.log('Horarios cargados:', horariosData.length);
+        } else {
+            console.warn('No se encontraron datos de horarios');
+            horariosData = [];
+        }
+        
+        if (paradasScript && paradasScript.textContent) {
+            paradasData = JSON.parse(paradasScript.textContent);
+        }
+        
+        if (paradasRutaScript && paradasRutaScript.textContent) {
+            paradasRuta = JSON.parse(paradasRutaScript.textContent);
+            console.log('Paradas por ruta:', Object.keys(paradasRuta).length);
+        } else {
+            console.warn('No se encontraron datos de paradas por ruta');
+            paradasRuta = {};
+        }
+    } catch (e) {
+        console.error('Error parsing JSON:', e);
+        horariosData = [];
+        paradasRuta = {};
+        mostrarAlerta('Error al cargar los datos', 'error');
+    }
+    
+    // Inicializar datos
+    function initData() {
+        todosLosHorarios = horariosData;
+        renderTable();
+    }
+    
+    // Función para filtrar datos por búsqueda
+    function filterData() {
+        if (!searchTerm) return todosLosHorarios;
+        
+        const term = searchTerm.toLowerCase();
+        return todosLosHorarios.filter(horario => {
+            const origenNombre = (horario.origen_nombre || horario.origen?.nombre || '').toLowerCase();
+            const destinoNombre = (horario.destino_nombre || horario.destino?.nombre || '').toLowerCase();
+            const frecuencia = (horario.frecuencia || '').toLowerCase();
+            
+            return origenNombre.includes(term) || 
+                   destinoNombre.includes(term) || 
+                   frecuencia.includes(term);
+        });
+    }
+    
+    // Función para paginar datos
+    function paginateData(data) {
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        return data.slice(startIndex, endIndex);
+    }
+    
+    // Función auxiliar para obtener nombre de origen
+    function getOrigenNombre(horario) {
+        if (horario.origen_nombre) return horario.origen_nombre;
+        if (horario.origen && horario.origen.nombre) return horario.origen.nombre;
+        return 'Sin origen';
+    }
+    
+    // Función auxiliar para obtener nombre de destino
+    function getDestinoNombre(horario) {
+        if (horario.destino_nombre) return horario.destino_nombre;
+        if (horario.destino && horario.destino.nombre) return horario.destino.nombre;
+        return 'Sin destino';
+    }
+    
+    // Función para actualizar paradas según ruta seleccionada
+    function actualizarParadasPorRuta(rutaId) {
+        const origenSelect = document.getElementById("origen");
+        const destinoSelect = document.getElementById("destino");
+        
+        origenSelect.innerHTML = "<option value=''>Seleccionar Origen</option>";
+        destinoSelect.innerHTML = "<option value=''>Seleccionar Destino</option>";
+        
+        if (rutaId && paradasRuta[rutaId]) {
+            paradasRuta[rutaId].forEach(p => {
+                const option1 = document.createElement("option");
+                option1.value = p.id;
+                option1.textContent = p.nombre;
+                const option2 = option1.cloneNode(true);
+                origenSelect.appendChild(option1);
+                destinoSelect.appendChild(option2);
+            });
+        }
+    }
+    
+    // Función para renderizar la tabla
+    function renderTable() {
+        const filteredData = filterData();
+        const totalRecords = filteredData.length;
+        const totalPages = Math.ceil(totalRecords / pageSize);
+        
+        if (currentPage > totalPages && totalPages > 0) {
+            currentPage = totalPages;
+        } else if (totalPages === 0) {
+            currentPage = 1;
+        }
+        
+        const paginatedData = paginateData(filteredData);
+        const tbody = document.getElementById('tablaHorarios');
+        tbody.innerHTML = '';
+        
+        if (paginatedData.length === 0) {
+            const row = tbody.insertRow();
+            const cell = row.insertCell(0);
+            cell.colSpan = 6;
+            cell.textContent = 'No hay horarios registrados';
+            cell.style.textAlign = 'center';
+            cell.style.padding = '2rem';
+        } else {
+            paginatedData.forEach(horario => {
+                const row = tbody.insertRow();
+                row.id = `fila${horario.id}`;
+                
+                row.insertCell(0).textContent = getOrigenNombre(horario);
+                row.insertCell(1).textContent = getDestinoNombre(horario);
+                row.insertCell(2).textContent = formatTimeToAMPM(horario.primer_viaje);
+                row.insertCell(3).textContent = formatTimeToAMPM(horario.ultimo_viaje);
+                row.insertCell(4).textContent = horario.frecuencia || '';
+                
+                const accionesCell = row.insertCell(5);
+                accionesCell.innerHTML = `
+                    <div class="btn-group">
+                        <button class="btn btn-primary btnEditar" data-id="${horario.id}">
+                            Editar
+                        </button>
+                        <button class="btn btn-danger btnEliminar" data-id="${horario.id}">
+                            Eliminar
+                        </button>
+                    </div>
+                `;
+            });
+        }
+        
+        asignarEventosBotones();
+        renderPagination(totalPages, totalRecords);
+        
+        if (totalRecords > 0) {
+            const startRecord = (currentPage - 1) * pageSize + 1;
+            const endRecord = Math.min(currentPage * pageSize, totalRecords);
+            document.getElementById('recordsInfo').textContent = 
+                `Mostrando ${startRecord} - ${endRecord} de ${totalRecords} registros`;
+        } else {
+            document.getElementById('recordsInfo').textContent = 'No hay registros para mostrar';
+        }
+    }
+    
+    // Función para renderizar paginación
+    function renderPagination(totalPages, totalRecords) {
+        const paginationDiv = document.getElementById('pagination');
+        
+        if (totalPages <= 1 && totalRecords === 0) {
+            paginationDiv.innerHTML = '';
+            return;
+        }
+        
+        let paginationHtml = '<ul class="pagination">';
+        paginationHtml += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a href="#" onclick="changePage(${currentPage - 1}); return false;">« Anterior</a>
+        </li>`;
+        
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+        
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+        
+        if (startPage > 1) {
+            paginationHtml += `<li><a href="#" onclick="changePage(1); return false;">1</a></li>`;
+            if (startPage > 2) paginationHtml += `<li><span>...</span></li>`;
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHtml += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                <a href="#" onclick="changePage(${i}); return false;">${i}</a>
+            </li>`;
+        }
+        
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) paginationHtml += `<li><span>...</span></li>`;
+            paginationHtml += `<li><a href="#" onclick="changePage(${totalPages}); return false;">${totalPages}</a></li>`;
+        }
+        
+        paginationHtml += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a href="#" onclick="changePage(${currentPage + 1}); return false;">Siguiente »</a>
+        </li>`;
+        paginationHtml += '</ul>';
+        paginationDiv.innerHTML = paginationHtml;
+    }
+    
+    function changePage(page) {
+        const filteredData = filterData();
+        const totalPages = Math.ceil(filteredData.length / pageSize);
+        
+        if (page >= 1 && page <= totalPages) {
+            currentPage = page;
+            renderTable();
+        }
+    }
+    
+    function changePageSize() {
+        pageSize = parseInt(document.getElementById('pageSizeSelect').value);
+        currentPage = 1;
+        renderTable();
+    }
+    
+    function searchHorarios() {
+        searchTerm = document.getElementById('searchInput').value;
+        currentPage = 1;
+        renderTable();
+    }
+    
+    function asignarEventosBotones() {
+        document.querySelectorAll(".btnEliminar").forEach(btn => {
+            btn.removeEventListener('click', eliminarHandler);
+            btn.addEventListener('click', eliminarHandler);
+        });
+        
+        document.querySelectorAll(".btnEditar").forEach(btn => {
+            btn.removeEventListener('click', editarHandler);
+            btn.addEventListener('click', editarHandler);
+        });
+    }
+    
+    async function eliminarHandler(e) {
+        const id = e.currentTarget.dataset.id;
+        if (confirm('¿Estás seguro de eliminar este horario?')) {
+            try {
+                await eliminarHorario(id);
+            } catch (error) {
+                mostrarAlerta(error.message, 'error');
+            }
+        }
+    }
+    
+    function editarHandler(e) {
+        const id = e.currentTarget.dataset.id;
+        const horario = todosLosHorarios.find(h => h.id == id);
+        if (horario) {
+            document.getElementById("ruta").value = horario.ruta || horario.ruta_id || '';
+            document.getElementById("origen").value = horario.origen || horario.origen_id || '';
+            document.getElementById("destino").value = horario.destino || horario.destino_id || '';
+            document.getElementById("primer_viaje").value = horario.primer_viaje || '';
+            document.getElementById("ultimo_viaje").value = horario.ultimo_viaje || '';
+            document.getElementById("frecuencia").value = horario.frecuencia || '';
+            horarioEditando = id;
+            document.getElementById('btnCancelar').style.display = 'inline-block';
+            
+            // Actualizar paradas según la ruta seleccionada
+            const rutaId = document.getElementById("ruta").value;
+            if (rutaId) {
+                actualizarParadasPorRuta(rutaId);
+            }
+        }
+    }
+    
+    async function crearHorario() {
         const origen = document.getElementById("origen").value;
         const destino = document.getElementById("destino").value;
         const ruta = document.getElementById("ruta").value;
-
+        const primer_viaje = document.getElementById("primer_viaje").value;
+        const ultimo_viaje = document.getElementById("ultimo_viaje").value;
+        const frecuencia = document.getElementById("frecuencia").value;
+        
         if (!origen || !destino) {
-            alert("Selecciona origen y destino");
+            mostrarAlerta("Selecciona origen y destino", "error");
             return;
         }
-
-        let url = "/admin-panel/crear_horario/";
-
-        if (window.horarioEditando) {
-            url = "/admin-panel/editar_horario/" + window.horarioEditando + "/";
+        
+        if (!primer_viaje || !ultimo_viaje) {
+            mostrarAlerta("Ingresa el primer y último viaje", "error");
+            return;
         }
-
-        fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": getCookie("csrftoken")
-            },
-            body: JSON.stringify({
-                ruta: ruta,
-                origen: origen,
-                destino: destino,
-                primer_viaje: document.getElementById("primer_viaje").value,
-                ultimo_viaje: document.getElementById("ultimo_viaje").value,
-                frecuencia: document.getElementById("frecuencia").value,
-            })
-        })
-            .then(r => r.json())
-            .then(data => {
-                location.reload();
+        
+        let url = "/admin-panel/crear_horario/";
+        if (horarioEditando) {
+            url = "/admin-panel/editar_horario/" + horarioEditando + "/";
+        }
+        
+        try {
+            const data = await fetchWithCSRF(url, {
+                method: "POST",
+                body: JSON.stringify({
+                    ruta: ruta,
+                    origen: origen,
+                    destino: destino,
+                    primer_viaje: primer_viaje,
+                    ultimo_viaje: ultimo_viaje,
+                    frecuencia: frecuencia
+                })
             });
-    }
-
-    /* ==========================
-    ELIMINAR HORARIO
-    ========================== */
-    function eliminarHorario(id) {
-
-        fetch("/admin-panel/eliminar_horario/" + id + "/", {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": getCookie("csrftoken")
+            
+            if (data.status === "ok") {
+                mostrarAlerta("Horario guardado correctamente", "success");
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                mostrarAlerta(data.message || "Error al guardar el horario", "error");
             }
-        })
-            .then(r => r.json())
-            .then(data => {
-                const fila = document.getElementById("fila" + id);
-                if (fila) fila.remove();
-            });
-
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarAlerta(error.message, "error");
+        }
     }
-
-    document.querySelectorAll(".btnEliminar").forEach(btn => {
-        btn.addEventListener("click", function () {
-            const id = this.dataset.id;
-            eliminarHorario(id);
-        });
+    
+    async function eliminarHorario(id) {
+        try {
+            const data = await fetchWithCSRF("/admin-panel/eliminar_horario/" + id + "/", {
+                method: "POST"
+            });
+            
+            if (data.status === "ok") {
+                todosLosHorarios = todosLosHorarios.filter(h => h.id != id);
+                renderTable();
+                mostrarAlerta("Horario eliminado correctamente", "success");
+            } else {
+                throw new Error(data.message || "Error al eliminar horario");
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+    
+    // Eventos
+    document.getElementById("searchInput").addEventListener("input", searchHorarios);
+    document.getElementById("pageSizeSelect").addEventListener("change", changePageSize);
+    
+    document.getElementById("ruta").addEventListener("change", function() {
+        const rutaId = this.value;
+        if (rutaId) {
+            actualizarParadasPorRuta(rutaId);
+        }
     });
-
-    /* ==========================
-    EDITAR HORARIO
-    ========================== */
-
-    document.querySelectorAll(".btnEditar").forEach(btn => {
-
-        btn.addEventListener("click", function () {
-
-            const id = this.dataset.id;
-
-            const horario = horariosData.find(h => h.id == id);
-
-            if (!horario) return;
-
-            // llenar formulario
-            document.getElementById("ruta").value = horario.ruta;
-            document.getElementById("origen").value = horario.origen;
-            document.getElementById("destino").value = horario.destino;
-
-            document.getElementById("primer_viaje").value = horario.primer_viaje;
-            document.getElementById("ultimo_viaje").value = horario.ultimo_viaje;
-            document.getElementById("frecuencia").value = horario.frecuencia;
-
-            // guardamos id del horario que se edita
-            window.horarioEditando = id;
-
-        });
-
-    });
-
+    
+    // Inicializar
+    initData();
 </script>
 {% endblock %}

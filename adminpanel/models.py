@@ -24,12 +24,14 @@ class Ruta(models.Model):
         return self.nombre
 
 
-class Parada(models.Model):
+# models.py - Agregar campo sentido a Parada
 
+class Parada(models.Model):
     nombre = models.CharField(max_length=150)
     lat = models.FloatField()
     lng = models.FloatField()
-
+    sentido = models.CharField(max_length=100, blank=True, null=True)  # Campo abierto para el sentido
+    
     class Meta:
         ordering = ["nombre"]
 

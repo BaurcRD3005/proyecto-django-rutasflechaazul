@@ -61,6 +61,8 @@ def login_view(request):
 # PARADAS
 # ==============================
 
+# views.py - Actualizar la función paradas
+
 @login_required
 def paradas(request):
     paradas = Parada.objects.all()
@@ -77,7 +79,8 @@ def paradas(request):
                     "nombre": rp.parada.nombre,
                     "lat": rp.parada.lat,
                     "lng": rp.parada.lng,
-                    "orden": rp.orden
+                    "orden": rp.orden,
+                    "sentido": rp.parada.sentido
                 }
                 for rp in r.ruta_paradas.all().order_by("orden")
             ]
@@ -87,25 +90,31 @@ def paradas(request):
 
     return render(request, "adminpanel/paradas.html", {
         "paradas": [
-            {"id": p.id, "nombre": p.nombre, "lat": p.lat, "lng": p.lng}
+            {
+                "id": p.id, 
+                "nombre": p.nombre, 
+                "lat": p.lat, 
+                "lng": p.lng,
+                "sentido": p.sentido
+            }
             for p in paradas
         ],
         "rutas": rutas_json,
         "GOOGLE_MAPS_API_KEY": settings.GOOGLE_MAPS_API_KEY
     })
 
+# views.py - Actualizar la función crear_parada
 
 @login_required
 def crear_parada(request):
-
     if request.method == "POST":
-
         data = json.loads(request.body)
-
+        
         parada = Parada.objects.create(
             nombre=data["nombre"],
             lat=data["lat"],
-            lng=data["lng"]
+            lng=data["lng"],
+            sentido=data.get("sentido", "")  # Campo opcional
         )
 
         # registrar actividad
@@ -117,7 +126,8 @@ def crear_parada(request):
 
         return JsonResponse({
             "id": parada.id,
-            "nombre": parada.nombre
+            "nombre": parada.nombre,
+            "sentido": parada.sentido
         })
 
 
@@ -325,13 +335,16 @@ def horarios_admin(request):
     rutas = Ruta.objects.all()
     paradas = Parada.objects.all()
 
-    # horarios json
+    # horarios json - INCLUYENDO LOS NOMBRES
     horarios_json = [
         {
             "id": h.id,
             "ruta": h.ruta.id,
+            "ruta_nombre": h.ruta.nombre,  # ✅ Agregado
             "origen": h.origen.id,
+            "origen_nombre": h.origen.nombre,  # ✅ Agregado
             "destino": h.destino.id,
+            "destino_nombre": h.destino.nombre,  # ✅ Agregado
             "primer_viaje": str(h.primer_viaje),
             "ultimo_viaje": str(h.ultimo_viaje),
             "frecuencia": h.frecuencia,
@@ -359,6 +372,7 @@ def horarios_admin(request):
         "paradas": paradas,
         "rutas": rutas,
         "horarios_json": horarios_json,
+        "paradas_json": [{"id": p.id, "nombre": p.nombre} for p in paradas],  # ✅ Agregado
         "paradas_ruta_json": paradas_ruta
     })
 
@@ -388,26 +402,44 @@ def crear_horario(request):
             descripcion=f"Se modificó el horario de la ruta {ruta.nombre}"
         )
 
+        # ✅ Devolver los datos completos con nombres
         return JsonResponse({
             "status": "ok",
-            "id": horario.id
+            "id": horario.id,
+            "ruta_nombre": ruta.nombre,
+            "origen_nombre": origen.nombre,
+            "destino_nombre": destino.nombre,
+            "primer_viaje": str(horario.primer_viaje),
+            "ultimo_viaje": str(horario.ultimo_viaje),
+            "frecuencia": horario.frecuencia
         })
 
 
 @login_required
 def eliminar_horario(request, id):
 
-    if request.method == "POST":
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Método no permitido"}, status=405)
 
-        HorarioRuta.objects.filter(id=id).delete()
+    try:
+        horario = HorarioRuta.objects.get(id=id)
+        ruta_nombre = horario.ruta.nombre  # Guardar para el log
+        
+        horario.delete()
 
         ActividadReciente.objects.create(
             usuario=request.user,
-            accion="edit_horario",
-            descripcion="Se eliminó un horario"
+            accion="delete_horario",
+            descripcion=f"Se eliminó un horario de la ruta {ruta_nombre}"
         )
 
         return JsonResponse({"status": "ok"})
+        
+    except HorarioRuta.DoesNotExist:
+        return JsonResponse({
+            "status": "error",
+            "message": "Horario no encontrado"
+        }, status=404)
     
 @login_required
 def editar_horario(request, id):
@@ -436,7 +468,17 @@ def editar_horario(request, id):
             descripcion=f"Se editó un horario de la ruta {horario.ruta.nombre}"
         )
 
-        return JsonResponse({"ok": True})
+        # ✅ Devolver los datos actualizados con nombres
+        return JsonResponse({
+            "status": "ok",
+            "id": horario.id,
+            "ruta_nombre": horario.ruta.nombre,
+            "origen_nombre": horario.origen.nombre,
+            "destino_nombre": horario.destino.nombre,
+            "primer_viaje": str(horario.primer_viaje),
+            "ultimo_viaje": str(horario.ultimo_viaje),
+            "frecuencia": horario.frecuencia
+        })
     
 # ==============================
 # TARIFAS
@@ -453,8 +495,11 @@ def tarifas_admin(request):
         {
             "id": t.id,
             "ruta": t.ruta.id,
+            "ruta_nombre": t.ruta.nombre,  # ✅ Agregado
             "origen": t.origen.id,
+            "origen_nombre": t.origen.nombre,  # ✅ Agregado
             "destino": t.destino.id,
+            "destino_nombre": t.destino.nombre,  # ✅ Agregado
             "tarifa": float(t.tarifa),
             "descuento": float(t.descuento),
         }
@@ -509,9 +554,15 @@ def crear_tarifa(request):
             descripcion=f"Se agregó tarifa a la ruta {ruta.nombre}"
         )
 
+        # ✅ Devolver los datos completos con nombres
         return JsonResponse({
             "status": "ok",
-            "id": tarifa.id
+            "id": tarifa.id,
+            "ruta_nombre": ruta.nombre,
+            "origen_nombre": origen.nombre,
+            "destino_nombre": destino.nombre,
+            "tarifa": float(tarifa.tarifa),
+            "descuento": float(tarifa.descuento)
         })
         
 @login_required
@@ -538,21 +589,31 @@ def editar_tarifa(request, id):
             descripcion=f"Se editó tarifa de la ruta {tarifa.ruta.nombre}"
         )
 
-        return JsonResponse({"ok": True})
+        # ✅ Devolver los datos actualizados con nombres
+        return JsonResponse({
+            "status": "ok",
+            "id": tarifa.id,
+            "ruta_nombre": tarifa.ruta.nombre,
+            "origen_nombre": tarifa.origen.nombre,
+            "destino_nombre": tarifa.destino.nombre,
+            "tarifa": float(tarifa.tarifa),
+            "descuento": float(tarifa.descuento)
+        })
     
 @login_required
 def eliminar_tarifa(request, id):
 
     if request.method != "POST":
-        return JsonResponse({"status": "error", "message": "Método no permitido"})
+        return JsonResponse({"status": "error", "message": "Método no permitido"}, status=405)
 
     try:
         tarifa = TarifaRuta.objects.get(id=id)
+        ruta_nombre = tarifa.ruta.nombre  # Guardar para el log
 
         ActividadReciente.objects.create(
             usuario=request.user,
             accion="delete_tarifa",
-            descripcion=f"Se eliminó tarifa de la ruta {tarifa.ruta.nombre}"
+            descripcion=f"Se eliminó tarifa de la ruta {ruta_nombre}"
         )
 
         tarifa.delete()
@@ -560,9 +621,35 @@ def eliminar_tarifa(request, id):
         return JsonResponse({"status": "ok"})
 
     except TarifaRuta.DoesNotExist:
-
         return JsonResponse({
             "status": "error",
             "message": "Tarifa no encontrada"
-        })
+        }, status=404)
         
+# views.py - Actualizar la función editar_parada
+
+@login_required
+def editar_parada(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        parada_id = data.get("id")
+        nuevo_nombre = data.get("nombre")
+        nuevo_sentido = data.get("sentido")
+
+        try:
+            parada = Parada.objects.get(id=parada_id)
+            if nuevo_nombre:
+                parada.nombre = nuevo_nombre
+            if nuevo_sentido is not None:  # Permitir vacío
+                parada.sentido = nuevo_sentido
+            parada.save()
+
+            ActividadReciente.objects.create(
+                usuario=request.user,
+                accion="edit_parada",
+                descripcion=f"Se editó la parada {parada.nombre}"
+            )
+
+            return JsonResponse({"status": "success"})
+        except Parada.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Parada no encontrada"})

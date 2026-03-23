@@ -14,6 +14,7 @@ urlpatterns = [
     path("eliminar_horario/<int:id>/", views.eliminar_horario),
     path("eliminar_ruta/<int:id>/", views.eliminar_ruta, name="eliminar_ruta"),
     path("editar_ruta/<int:id>/", views.editar_ruta, name="editar_ruta"),
+    path("editar_parada/", views.editar_parada, name="editar_parada"),
     path('eliminar_parada/', views.eliminar_parada, name='eliminar_parada'),
     path("editar_horario/<int:id>/", views.editar_horario),
     path("tarifas/", views.tarifas_admin, name="admin_tarifas"),

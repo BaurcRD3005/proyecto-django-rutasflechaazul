@@ -15,10 +15,16 @@
     <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
 
     <style>
+        /* HERO */
         .zones-hero {
             padding: 8rem 0 3rem;
             background: linear-gradient(rgba(30, 64, 175, 0.9), rgba(30, 64, 175, 0.8));
             color: white;
+        }
+
+        .zones-hero h1,
+        .zones-hero .hero-subtitle {
+            color: white !important;
         }
 
         .coverage-map {
@@ -34,12 +40,15 @@
             padding: 1.5rem;
             border-radius: var(--radio-borde);
             box-shadow: var(--sombra-suave);
+            margin-top: 2rem;
             margin-bottom: 2rem;
         }
 
         .search-input-group {
             display: flex;
             gap: 1rem;
+            flex-wrap: wrap;
+            position: relative;
         }
 
         .search-input {
@@ -56,16 +65,113 @@
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
-        .no-results {
-            text-align: center;
-            padding: 3rem;
-            color: var(--gris-medio);
+        .modal-combi {
             display: none;
+            position: fixed;
+            z-index: 1000;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
         }
 
-        .zones-hero h1,
-        .zones-hero .hero-subtitle {
+        .modal-contenido {
+            background: white;
+            padding: 10px;
+            border-radius: 15px;
+            max-width: 350px;
+            animation: zoomIn 0.3s ease;
+        }
+
+        .modal-contenido img {
+            width: 100%;
+            border-radius: 10px;
+        }
+
+        @keyframes zoomIn {
+            from {
+                transform: scale(0.7);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Autocompletado */
+        .suggestions-container {
+            display: none;
+            position: absolute;
+            top: 110%;
+            left: 0;
+            background: white;
+            border: 1px solid var(--azul-suave);
+            border-radius: var(--radio-borde);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 999;
+            width: 100%;
+        }
+
+        .suggestion-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .suggestion-item:hover {
+            background: var(--azul-suave);
+            color: #1e3a8a;
+        }
+
+        /* Tabla de paradas estilo horarios */
+        #tablaParadas table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 15px;
+            overflow: hidden;
+            min-width: 800px;
+        }
+
+        #tablaParadas th {
+            background: linear-gradient(135deg, var(--azul-primario), var(--azul-secundario));
             color: white;
+            padding: 1rem;
+            text-align: left;
+        }
+
+        #tablaParadas td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--gris-claro);
+        }
+
+        #tablaParadas tbody tr:hover {
+            background: var(--azul-suave);
+        }
+
+        #tablaParadas tbody tr:nth-child(even) {
+            background: rgba(219, 234, 254, 0.3);
+        }
+
+        .price-tag {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+
+        .time-cell {
+            background: var(--azul-suave);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        #tablaParadas {
+            margin-bottom: 4rem;
         }
     </style>
 </head>
@@ -107,7 +213,11 @@
             <h3><i class="fas fa-search"></i> Busca tu zona</h3>
             <div class="search-input-group">
                 <input type="text" class="search-input" id="origenInput" placeholder="Origen (tu ubicación o escribe)">
+                <div id="origenSuggestions" class="suggestions-container"></div>
+
                 <input type="text" class="search-input" id="destinoInput" placeholder="Destino">
+                <div id="destinoSuggestions" class="suggestions-container"></div>
+
                 <button class="btn btn-primary" onclick="buscarRuta()"><i class="fas fa-search"></i> Buscar
                     ruta</button>
                 <button class="btn btn-primary" onclick="obtenerUbicacion()"><i class="fas fa-location-arrow"></i> Usar
@@ -119,231 +229,326 @@
         <div class="coverage-map">
             <div id="map" style="width:100%; height:500px;"></div>
         </div>
+
+        <!-- TABLA DE PARADAS -->
+        <div id="tablaParadas">
+            {{ tabla_paradas|safe }}
+        </div>
     </div>
 
+    <!-- MODAL -->
+    <div id="modalCombi" class="modal-combi">
+        <div class="modal-contenido">
+            <span onclick="cerrarModal()" style="cursor:pointer; float:right; font-size:20px;">&times;</span>
+            <img src="{% static 'images/combi.png' %}" alt="Unidad Flecha Azul">
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-center-text"
+                style="display: flex; justify-content: center; align-items: center; gap: 1rem; width: 100%; margin-bottom: 1.5rem; font-size: 1rem; color: rgba(255,255,255,0.8);">
+                <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
+                    <i class="fas fa-clock"></i> Lunes - Domingos de 5:00 AM a 10:45 PM
+                </span>
+                <span class="separator" style="color: rgba(255,255,255,0.8); font-weight: bold;">|</span>
+                <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
+                    <i class="fas fa-map-marker-alt"></i> 72090, Av. 10 Pte. 113, San Miguelito, Heroica Puebla de
+                    Zaragoza, Pue.
+                </span>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2026 Flecha Azul - Todos los derechos reservados. |
+                    <a href="#">Términos y Condiciones</a> |
+                    <a href="#">Política de Privacidad</a>
+                </p>
+                <p class="mt-1" style="font-size: 0.875rem; color: rgba(255,255,255,0.5);">
+                    <i class="fas fa-bus"></i> Viaja seguro, viaja con Flecha Azul
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JSON DE PARADAS -->
     {{ paradas_json|json_script:"paradas-data" }}
+    {{ horarios_json|json_script:"horarios-data" }}
 
     <script>
-        let mapaGlobal;
+        let mapaGlobal = null;
         let markersRuta = [];
         let rutaPolyline = null;
-        let rutasMapa = [];
         let miUbicacion = null;
+        let directionsRendererGlobal = null;
+        let directionsService = null;
+
+        let horarios = [];
+
+        try {
+            const data = JSON.parse(document.getElementById("horarios-data").textContent);
+            horarios = Array.isArray(data) ? data : Object.values(data);
+        } catch (e) {
+            console.error("Error leyendo horarios:", e);
+        }
 
         function inicializarMapa() {
-            const paradas = JSON.parse(document.getElementById('paradas-data').textContent);
+            const paradasElement = document.getElementById('paradas-data');
+            let paradas = JSON.parse(paradasElement.textContent);
 
             mapaGlobal = new google.maps.Map(document.getElementById('map'), {
                 zoom: 12,
                 center: { lat: 19.3182, lng: -98.2375 }
             });
 
-            // Crear marcadores de todas las paradas
             paradas.forEach(p => {
-                const marker = new google.maps.Marker({
+                if (!p.lat || !p.lng) return;
+                markersRuta.push(new google.maps.Marker({
                     position: { lat: Number(p.lat), lng: Number(p.lng) },
                     map: mapaGlobal,
                     title: p.nombre
-                });
-
-                const info = new google.maps.InfoWindow({
-                    content: `<div style="padding:10px"><h4>${p.nombre}</h4></div>`
-                });
-
-                marker.addListener("click", () => {
-                    info.open(mapaGlobal, marker);
-                    // Al hacer click en parada, se dibuja la ruta hasta esa parada
-                    if (miUbicacion) {
-                        fetch(`/buscar_zona/?zona=${encodeURIComponent(p.nombre)}&lat=${miUbicacion.lat}&lng=${miUbicacion.lng}`)
-                            .then(r => r.json())
-                            .then(data => {
-                                limpiarMapa();
-                                const path = data.paradas.map(p => ({ lat: Number(p.lat), lng: Number(p.lng) }));
-                                rutaPolyline = new google.maps.Polyline({
-                                    path: path,
-                                    geodesic: true,
-                                    strokeColor: data.color || "#2563eb",
-                                    strokeWeight: 5,
-                                    map: mapaGlobal
-                                });
-
-                                data.paradas.forEach(par => {
-                                    const m = new google.maps.Marker({
-                                        position: { lat: Number(par.lat), lng: Number(par.lng) },
-                                        map: mapaGlobal,
-                                        title: par.nombre
-                                    });
-                                    markersRuta.push(m);
-                                });
-
-                                // Dibujar ruta desde ubicación del usuario a la parada clickeada
-                                const directionsService = new google.maps.DirectionsService();
-                                const directionsRenderer = new google.maps.DirectionsRenderer({ map: mapaGlobal });
-                                directionsService.route({
-                                    origin: miUbicacion,
-                                    destination: path[path.length - 1],
-                                    travelMode: google.maps.TravelMode.WALKING
-                                }, (result, status) => {
-                                    if (status === "OK") directionsRenderer.setDirections(result);
-                                });
-                            });
-                    }
-                });
-
-                markersRuta.push(marker);
+                }));
             });
+
+            window.paradasGlobal = paradas;
+
+            autocompletar('origenInput', 'origenSuggestions');
+            autocompletar('destinoInput', 'destinoSuggestions');
+
+            directionsService = new google.maps.DirectionsService();
+            directionsRendererGlobal = new google.maps.DirectionsRenderer({ suppressMarkers: false });
         }
 
-        function limpiarMapa() {
-            markersRuta.forEach(m => m.setMap(null));
-            markersRuta = [];
-            if (rutaPolyline) rutaPolyline.setMap(null);
+        function autocompletar(inputId, suggestionsId) {
+            const input = document.getElementById(inputId);
+            const suggestions = document.getElementById(suggestionsId);
+
+            input.addEventListener('input', function () {
+                const valor = this.value.toLowerCase().trim();
+                suggestions.innerHTML = '';
+                suggestions.style.display = 'none';
+
+                if (!valor) return;
+
+                const filtradas = window.paradasGlobal.filter(p =>
+                    p.nombre.toLowerCase().includes(valor)
+                );
+
+                if (filtradas.length > 0) suggestions.style.display = 'block';
+
+                filtradas.slice(0, 8).forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    const sentidoTexto = p.sentido && p.sentido !== "Sin sentido" ? p.sentido : "No especificado";
+                    div.innerHTML = `<div><strong>${p.nombre}</strong></div>
+                                     <div style="font-size: 0.85em; color: #666;">Sentido hacia: ${sentidoTexto}</div>`;
+                    div.addEventListener('click', () => {
+                        input.value = p.nombre;
+                        suggestions.innerHTML = '';
+                        suggestions.style.display = 'none';
+                    });
+                    suggestions.appendChild(div);
+                });
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+                    suggestions.innerHTML = '';
+                    suggestions.style.display = 'none';
+                }
+            });
         }
 
         function obtenerUbicacion() {
-            if (!navigator.geolocation) return;
-
-            navigator.geolocation.getCurrentPosition(pos => {
-                miUbicacion = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                document.getElementById('origenInput').value = miUbicacion.lat + ',' + miUbicacion.lng;
-
-                new google.maps.Marker({
-                    position: miUbicacion,
-                    map: mapaGlobal,
-                    title: "Tu ubicación",
-                    icon: "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                });
-
-                mapaGlobal.setCenter(miUbicacion);
-            });
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    miUbicacion = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    document.getElementById('origenInput').value =
+                        miUbicacion.lat.toFixed(6) + ',' + miUbicacion.lng.toFixed(6);
+                    alert("Ubicación obtenida");
+                },
+                () => alert("Error obteniendo ubicación")
+            );
         }
 
-        function distancia(lat1, lng1, lat2, lng2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLng = (lng2 - lng1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) ** 2 +
-                Math.cos(lat1 * Math.PI / 180) *
-                Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLng / 2) ** 2;
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        function obtenerDatosHorario(origen, destino) {
+            return horarios.find(h =>
+                h.origen.toLowerCase() === origen.toLowerCase() &&
+                h.destino.toLowerCase() === destino.toLowerCase()
+            );
+        }
+
+        function calcularProximaSalida(primerViaje, ultimoViaje, frecuencia) {
+            const ahora = new Date();
+            const [h1, m1] = primerViaje.split(":").map(Number);
+            const [h2, m2] = ultimoViaje.split(":").map(Number);
+            let inicio = new Date();
+            inicio.setHours(h1, m1, 0);
+            let fin = new Date();
+            fin.setHours(h2, m2, 0);
+            let salida = new Date(inicio);
+
+            while (salida <= fin) {
+                if (salida > ahora) {
+                    return salida.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+                }
+                salida.setMinutes(salida.getMinutes() + frecuencia);
+            }
+            return "Finalizado";
+        }
+
+        function mostrarTablasRuta(data, rutaParadas, origenParada, destinoParada) {
+            const horario = obtenerDatosHorario(origenParada.nombre, destinoParada.nombre);
+            let tarifa = "No disponible";
+            let proximaSalida = "Sin datos";
+
+            if (horario) {
+                tarifa = "$" + horario.tarifa;
+                proximaSalida = calcularProximaSalida(horario.primer_viaje, horario.ultimo_viaje, parseInt(horario.frecuencia));
+            }
+
+            document.getElementById('tablaParadas').innerHTML = `
+    <div class="table-container">
+        <table class="schedules-table">
+            <thead>
+                <tr>
+                    <th>Ruta</th>
+                    <th>Parada Origen</th>
+                    <th>Color</th>
+                    <th>Parada Destino</th>
+                    <th>Tarifa</th>
+                    <th>Próxima Salida</th>
+                    <th>Unidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>${data.ruta || "Ruta Flecha Azul"}</td>
+                    <td>${origenParada.nombre}</td>
+                    <td>
+                        <span style="
+                            display:inline-block;
+                            width:20px;
+                            height:20px;
+                            border-radius:50%;
+                            background:${data.color || "#2563eb"};
+                        "></span>
+                    </td>
+                    <td>${destinoParada.nombre}</td>
+                    <td><span class="price-tag">${tarifa}</span></td>
+                    <td><span class="time-cell">${proximaSalida}</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="abrirModal()">Ver</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>`;
         }
 
         function buscarRuta() {
             const destino = document.getElementById('destinoInput').value;
+            const origenInput = document.getElementById('origenInput').value;
             if (!destino) return alert("Ingresa destino");
 
-            const origenInput = document.getElementById('origenInput').value;
-            const geocoder = new google.maps.Geocoder();
-
-            const procesarUbicacion = (lat, lng) => {
+            if (!origenInput.includes(",")) miUbicacion = null;
+            if (origenInput.includes(",")) {
+                const [lat, lng] = origenInput.split(",").map(Number);
                 miUbicacion = { lat, lng };
-                fetch(`/buscar_zona/?zona=${encodeURIComponent(destino)}&lat=${lat}&lng=${lng}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        limpiarMapa();
-                        if (!data.paradas || data.paradas.length === 0) return alert("No hay ruta en esta zona");
+            }
+            dibujarRuta(destino);
+        }
 
-                        const path = data.paradas.map(p => ({ lat: Number(p.lat), lng: Number(p.lng) }));
+        function dibujarRuta(destino) {
+            const origenInput = document.getElementById('origenInput').value;
+            let url = "{% url 'buscar_zona' %}?zona=" + encodeURIComponent(destino);
+            if (miUbicacion) url += "&lat=" + miUbicacion.lat + "&lng=" + miUbicacion.lng;
+            else if (origenInput) url += "&origen=" + encodeURIComponent(origenInput);
+
+            fetch(url)
+                .then(r => {
+                    if (!r.ok) return r.json().then(err => { throw err; });
+                    return r.json();
+                })
+                .then(data => {
+                    if (data.error) { alert(data.error); return; }
+
+                    // Limpiar polylines anteriores
+                    if (rutaPolyline) rutaPolyline.setMap(null);
+
+                    // IMPORTANTE: Construir la polyline igual que en mapa.html
+                    let path = [];
+
+                    // PRIORIDAD 1: Usar vértices personalizados si existen
+                    if (data.vertices && data.vertices.length > 0) {
+                        console.log("Usando vértices personalizados:", data.vertices.length);
+                        path = data.vertices.map(v => ({
+                            lat: Number(v.lat),
+                            lng: Number(v.lng)
+                        }));
+                    }
+                    // PRIORIDAD 2: Usar paradas si no hay vértices
+                    else if (data.paradas && data.paradas.length > 0) {
+                        console.log("Usando paradas como fallback:", data.paradas.length);
+                        path = data.paradas.map(p => ({
+                            lat: Number(p.lat),
+                            lng: Number(p.lng)
+                        }));
+                    }
+
+                    // Dibujar la polyline (igual que en mapa.html)
+                    if (path.length > 0) {
                         rutaPolyline = new google.maps.Polyline({
                             path: path,
-                            geodesic: true,
                             strokeColor: data.color || "#2563eb",
                             strokeWeight: 5,
                             map: mapaGlobal
                         });
+                        console.log("Polyline dibujada con", path.length, "puntos");
+                    } else {
+                        console.warn("No hay puntos para dibujar la polyline");
+                    }
 
-                        data.paradas.forEach(p => {
-                            const marker = new google.maps.Marker({
-                                position: { lat: Number(p.lat), lng: Number(p.lng) },
-                                map: mapaGlobal,
-                                title: p.nombre
-                            });
-                            const info = new google.maps.InfoWindow({
-                                content: `<div style="padding:10px"><h4>${p.nombre}</h4></div>`
-                            });
-                            marker.addListener("click", () => info.open(mapaGlobal, marker));
-                            markersRuta.push(marker);
-                        });
+                    const origenParada = data.paradas[0];
+                    const destinoParada = data.paradas[data.paradas.length - 1];
 
-                        // Si usuario está cerca de alguna parada
-                        if (miUbicacion) {
-                            let paradaCercana = null;
-                            let distMin = Infinity;
-                            data.paradas.forEach(p => {
-                                const d = distancia(miUbicacion.lat, miUbicacion.lng, Number(p.lat), Number(p.lng));
-                                if (d < distMin) {
-                                    distMin = d;
-                                    paradaCercana = p;
-                                }
-                            });
-                            if (distMin <= 2) { // km
-                                const directionsService = new google.maps.DirectionsService();
-                                const directionsRenderer = new google.maps.DirectionsRenderer({ map: mapaGlobal });
-                                directionsService.route({
-                                    origin: miUbicacion,
-                                    destination: { lat: Number(paradaCercana.lat), lng: Number(paradaCercana.lng) },
-                                    travelMode: google.maps.TravelMode.WALKING
-                                }, (result, status) => {
-                                    if (status === "OK") directionsRenderer.setDirections(result);
-                                });
-                            }
+                    mostrarTablasRuta(data, data.paradas, origenParada, destinoParada);
+
+                    // Centrar mapa en la ruta
+                    const bounds = new google.maps.LatLngBounds();
+
+                    // Añadir todos los puntos de la ruta al bounds
+                    path.forEach(point => bounds.extend(point));
+
+                    // Si hay ubicación actual, también la añadimos
+                    if (miUbicacion) bounds.extend(miUbicacion);
+
+                    // Ajustar el mapa
+                    mapaGlobal.fitBounds(bounds);
+
+                    // Si el zoom es muy lejano, limitarlo a nivel 14
+                    google.maps.event.addListenerOnce(mapaGlobal, 'bounds_changed', () => {
+                        if (mapaGlobal.getZoom() > 14) {
+                            mapaGlobal.setZoom(14);
                         }
                     });
-            };
 
-            if (origenInput) {
-                geocoder.geocode({ address: origenInput }, (results, status) => {
-                    if (status === "OK" && results[0]) {
-                        const loc = results[0].geometry.location;
-                        procesarUbicacion(loc.lat(), loc.lng());
-                    } else {
-                        alert("No se pudo localizar el origen escrito");
-                    }
-                });
-            } else if (miUbicacion) {
-                procesarUbicacion(miUbicacion.lat, miUbicacion.lng);
-            } else {
-                alert("Primero permite que se obtenga tu ubicación o escribe un origen");
-            }
+                }).catch(e => console.error("Error en dibujarRuta:", e));
         }
 
-        function mostrarTodasRutas() {
-            const paradas = JSON.parse(document.getElementById('paradas-data').textContent);
-            limpiarMapa();
-
-            if (paradas.length > 0) {
-                const path = paradas.map(p => ({ lat: Number(p.lat), lng: Number(p.lng) }));
-                rutaPolyline = new google.maps.Polyline({
-                    path: path,
-                    geodesic: true,
-                    strokeColor: "#2563eb",
-                    strokeWeight: 5,
-                    map: mapaGlobal
-                });
-
-                paradas.forEach(p => {
-                    const marker = new google.maps.Marker({
-                        position: { lat: Number(p.lat), lng: Number(p.lng) },
-                        map: mapaGlobal,
-                        title: p.nombre
-                    });
-                    const info = new google.maps.InfoWindow({
-                        content: `<div style="padding:10px"><h4>${p.nombre}</h4></div>`
-                    });
-                    marker.addListener("click", () => info.open(mapaGlobal, marker));
-                    markersRuta.push(marker);
-                });
-
-                const bounds = new google.maps.LatLngBounds();
-                path.forEach(pt => bounds.extend(pt));
-                mapaGlobal.fitBounds(bounds);
-            }
+        function abrirModal() {
+            document.getElementById("modalCombi").style.display = "flex";
         }
+
+        function cerrarModal() {
+            document.getElementById("modalCombi").style.display = "none";
+        }
+
+        window.onload = inicializarMapa;
     </script>
 
-    <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places&callback=inicializarMapa">
+    <script async
+        src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&callback=inicializarMapa&libraries=geometry,drawing">
         </script>
 </body>
 

@@ -5,56 +5,231 @@
 
 {% block content %}
 
-<div class="chart-card">
-    <div class="chart-header">
-        <h3 class="chart-title">Crear Paradas</h3>
-    </div>
+<style>
+    /* ==========================
+   ESTILO DE CHART-CARD GENERAL
+========================== */
+    .chart-card h3 {
+        font-weight: bold;
+        color: var(--negro);
+        margin-bottom: 1rem;
+    }
 
-    <div style="margin-bottom:1rem">
-        <input type="text" id="nombreParada" placeholder="Nombre de la parada" class="table-search">
+    .chart-card h4 {
+        font-weight: bold;
+        color: var(--azul-secundario);
+        margin-bottom: 0.5rem;
+    }
+
+    /* ==========================
+   ESTILO DE TABLAS GENERAL
+========================== */
+    .schedules-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        border-radius: var(--radio-borde);
+        overflow: hidden;
+        min-width: 800px;
+    }
+
+    .schedules-table th,
+    .schedules-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--gris-claro);
+        font-weight: bold;
+    }
+
+    .schedules-table th {
+        background: linear-gradient(135deg, var(--azul-primario), var(--azul-secundario));
+        color: white;
+    }
+
+    .schedules-table tbody tr:hover {
+        background: var(--azul-suave);
+    }
+
+    /* Bordes redondeados de esquinas de la tabla */
+    .schedules-table th:first-child {
+        border-top-left-radius: var(--radio-borde);
+    }
+
+    .schedules-table th:last-child {
+        border-top-right-radius: var(--radio-borde);
+    }
+
+    .schedules-table tbody tr:last-child td:first-child {
+        border-bottom-left-radius: var(--radio-borde);
+    }
+
+    .schedules-table tbody tr:last-child td:last-child {
+        border-bottom-right-radius: var(--radio-borde);
+    }
+
+    /* ==========================
+   MODAL DE EDICIÓN
+========================== */
+    .modal-editar {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-editar-contenido {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        max-width: 400px;
+        width: 90%;
+        animation: zoomIn 0.3s ease;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    @keyframes zoomIn {
+        from {
+            transform: scale(0.7);
+            opacity: 0;
+        }
+
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .modal-editar h3 {
+        margin-top: 0;
+        color: var(--azul-primario);
+        border-bottom: 2px solid var(--azul-suave);
+        padding-bottom: 10px;
+    }
+
+    .modal-editar .form-group {
+        margin-bottom: 15px;
+    }
+
+    .modal-editar label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .modal-editar input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+
+    .modal-editar input:focus {
+        outline: none;
+        border-color: var(--azul-secundario);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
+
+    .modal-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .modal-buttons button {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+
+    .btn-guardar-modal {
+        background: var(--azul-primario);
+        color: white;
+    }
+
+    .btn-guardar-modal:hover {
+        background: var(--azul-secundario);
+    }
+
+    .btn-cancelar-modal {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-cancelar-modal:hover {
+        background: #5a6268;
+    }
+</style>
+
+<div class="chart-card">
+    <h3 class="chart-title">Crear Paradas</h3>
+
+    <div style="margin-bottom:1rem; display: flex; gap: 10px;">
+        <input type="text" id="nombreParada" placeholder="Nombre de la parada" class="table-search" style="flex: 2;">
+        <input type="text" id="sentidoParada" placeholder="Sentido (ej: Tlaxcala, Puebla, etc.)" class="table-search"
+            style="flex: 1;">
     </div>
 
     <div id="mapa" style="width:100%; height:500px;"></div>
 </div>
 
-{% endblock %}
+<!-- MODAL DE EDICIÓN -->
+<div id="modalEditarParada" class="modal-editar">
+    <div class="modal-editar-contenido">
+        <h3>Editar Parada</h3>
+        <div class="form-group">
+            <label>Nombre de la parada:</label>
+            <input type="text" id="editNombreParada" placeholder="Nombre de la parada">
+        </div>
+        <div class="form-group">
+            <label>Sentido hacia:</label>
+            <input type="text" id="editSentidoParada" placeholder="Ej: Tlaxcala, Puebla, etc.">
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-guardar-modal" onclick="guardarEdicionModal()">Guardar</button>
+            <button class="btn-cancelar-modal" onclick="cerrarModalEdicion()">Cancelar</button>
+        </div>
+    </div>
+</div>
 
+{% endblock %}
 
 {% block extra_js_scripts %}
 
-{{ paradas|json_script:"paradas-data" }}
+<!-- Aseguramos que paradas siempre sea un array JSON válido -->
+{{ paradas|default_if_none:"[]"|json_script:"paradas-data" }}
 
 <script>
-
     let mapa;
-    let marcadorTemporal = null;
+    let markersParadas = [];
+    let paradaEditandoId = null;  // ID de la parada que se está editando
 
     /* ===============================
        INICIALIZAR MAPA
     =============================== */
-
     function inicializarMapa() {
-
         mapa = new google.maps.Map(
             document.getElementById("mapa"),
-            {
-                center: { lat: 19.3167, lng: -98.2390 },
-                zoom: 15
-            }
+            { center: { lat: 19.3167, lng: -98.2390 }, zoom: 15 }
         );
 
-        /* Click para crear parada */
+        // Click para crear parada
         mapa.addListener("click", function (e) {
-
             let nombre = document.getElementById("nombreParada").value;
+            let sentido = document.getElementById("sentidoParada").value;
 
             if (!nombre) {
                 alert("Escribe primero el nombre de la parada");
                 return;
             }
-
-            crearParada(e.latLng.lat(), e.latLng.lng(), nombre);
-
+            crearParada(e.latLng.lat(), e.latLng.lng(), nombre, sentido);
         });
 
         cargarParadasExistentes();
@@ -63,138 +238,193 @@
     /* ===============================
        CREAR PARADA
     =============================== */
-
-    function crearParada(lat, lng, nombre) {
-
+    function crearParada(lat, lng, nombre, sentido) {
         fetch("/admin-panel/crear_parada/", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "X-CSRFToken": getCookie("csrftoken")
             },
-            body: JSON.stringify({
-                nombre: nombre,
-                lat: lat,
-                lng: lng
-            })
+            body: JSON.stringify({ nombre, lat, lng, sentido })
         })
             .then(r => r.json())
             .then(data => {
 
                 const marker = new google.maps.Marker({
-                    position: { lat: lat, lng: lng },
+                    position: { lat, lng },
                     map: mapa,
                     title: nombre
                 });
 
+                // Mostrar el sentido si existe
+                const sentidoHtml = data.sentido ? `<br><small>Sentido: ${data.sentido}</small><br>` : '<br>';
+
                 const infowindow = new google.maps.InfoWindow({
-                    content: `<div>
-                        <strong>${nombre}</strong><br>
-                        <button class="btn btn-danger" onclick="eliminarParada(${data.id}, this)">Eliminar</button>
-                     </div>`
+                    content: `<div style="min-width: 180px;">
+                        <strong>${nombre}</strong>
+                        ${sentidoHtml}
+                        <br>
+                        <button class="btn btn-primary" onclick="abrirModalEditar(${data.id})" style="margin-top:5px;">Editar</button>
+                        <button class="btn btn-danger" onclick="eliminarParada(${data.id}, this)" style="margin-top:5px;">Eliminar</button>
+                    </div>`
                 });
 
-                marker.addListener("click", function () {
-                    infowindow.open(mapa, marker);
-                });
-
+                marker.addListener("click", function () { infowindow.open(mapa, marker); });
                 marker.paradaId = data.id;
                 marker.infowindow = infowindow;
 
-                if (!window.markersParadas) window.markersParadas = [];
-                window.markersParadas.push(marker);
+                markersParadas.push(marker);
 
                 document.getElementById("nombreParada").value = "";
+                document.getElementById("sentidoParada").value = "";
             });
-
     }
 
     /* ===============================
        CARGAR PARADAS EXISTENTES
     =============================== */
-
     function cargarParadasExistentes() {
+        const paradasEl = document.getElementById("paradas-data");
+        let paradas = [];
 
-        const paradas = JSON.parse(
-            document.getElementById("paradas-data").textContent
-        );
-
-        paradas.forEach(p => {
-
-            const marker = new google.maps.Marker({
-                position: {
-                    lat: parseFloat(p.lat),
-                    lng: parseFloat(p.lng)
-                },
-                map: mapa,
-                title: p.nombre
-            });
-
-            const infowindow = new google.maps.InfoWindow({
-                content: `<div>
-                        <strong>${p.nombre}</strong><br>
-                        <button class="btn btn-danger" onclick="eliminarParada(${p.id}, this)">Eliminar</button>
-                      </div>`
-            });
-
-            marker.addListener("click", function () {
-                infowindow.open(mapa, marker);
-            });
-
-            // Guardar referencia del marcador dentro del objeto para eliminarlo luego
-            marker.paradaId = p.id;
-            marker.infowindow = infowindow;
-
-            // Agregar marcador a un array global
-            if (!window.markersParadas) window.markersParadas = [];
-            window.markersParadas.push(marker);
-        });
-    }
-
-    // Dibujar rutas existentes
-    const rutas = JSON.parse('{{ rutas_json|safe }}');
-
-    rutas.forEach(ruta => {
-        const coords = ruta.paradas.map(p => ({ lat: parseFloat(p.lat), lng: parseFloat(p.lng) }));
-
-        if (coords.length > 1) {
-            const polyline = new google.maps.Polyline({
-                path: coords,
-                geodesic: true,
-                strokeColor: ruta.color || "#ff0000",
-                strokeOpacity: 0.8,
-                strokeWeight: 4
-            });
-            polyline.setMap(mapa);
+        try {
+            paradas = paradasEl && paradasEl.textContent ? JSON.parse(paradasEl.textContent) : [];
+        } catch (e) {
+            console.error("Error parseando JSON de paradas:", e);
+            paradas = [];
         }
 
-        ruta.paradas.forEach(p => {
+        paradas.forEach(p => {
             const marker = new google.maps.Marker({
                 position: { lat: parseFloat(p.lat), lng: parseFloat(p.lng) },
                 map: mapa,
                 title: p.nombre
             });
 
+            const sentidoHtml = p.sentido ? `<br><small>Sentido: ${p.sentido}</small><br>` : '<br>';
+
             const infowindow = new google.maps.InfoWindow({
-                content: `<div><strong>${p.nombre}</strong></div>`
+                content: `<div style="min-width: 180px;">
+                    <strong>${p.nombre}</strong>
+                    ${sentidoHtml}
+                    <br>
+                    <button class="btn btn-primary" onclick="abrirModalEditar(${p.id})" style="margin-top:5px;">Editar</button>
+                    <button class="btn btn-danger" onclick="eliminarParada(${p.id}, this)" style="margin-top:5px;">Eliminar</button>
+                </div>`
             });
 
-            marker.addListener("click", function () {
-                infowindow.open(mapa, marker);
-            });
+            marker.addListener("click", function () { infowindow.open(mapa, marker); });
+            marker.paradaId = p.id;
+            marker.infowindow = infowindow;
 
-            if (!window.markersParadas) window.markersParadas = [];
-            window.markersParadas.push(marker);
+            markersParadas.push(marker);
         });
-    });
+    }
+
+    /* ===============================
+       ABRIR MODAL DE EDICIÓN
+    =============================== */
+    function abrirModalEditar(id) {
+        // Buscar la parada en los marcadores
+        const marker = markersParadas.find(m => m.paradaId === id);
+        if (!marker) return;
+        
+        // Guardar el ID de la parada que estamos editando
+        paradaEditandoId = id;
+        
+        // Obtener el nombre y sentido actual del infowindow
+        const infowindowContent = marker.infowindow.getContent();
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = infowindowContent;
+        
+        const nombreActual = tempDiv.querySelector('strong').innerText;
+        const sentidoElement = tempDiv.querySelector('small');
+        const sentidoActual = sentidoElement ? sentidoElement.innerText.replace('Sentido: ', '') : '';
+        
+        // Llenar el modal con los datos actuales
+        document.getElementById('editNombreParada').value = nombreActual;
+        document.getElementById('editSentidoParada').value = sentidoActual;
+        
+        // Mostrar el modal
+        const modal = document.getElementById('modalEditarParada');
+        modal.style.display = 'flex';
+        
+        // Cerrar el infowindow actual
+        marker.infowindow.close();
+    }
+    
+    /* ===============================
+       CERRAR MODAL DE EDICIÓN
+    =============================== */
+    function cerrarModalEdicion() {
+        const modal = document.getElementById('modalEditarParada');
+        modal.style.display = 'none';
+        paradaEditandoId = null;
+    }
+    
+    /* ===============================
+       GUARDAR EDICIÓN DESDE MODAL
+    =============================== */
+    function guardarEdicionModal() {
+        if (!paradaEditandoId) return;
+        
+        const nuevoNombre = document.getElementById('editNombreParada').value.trim();
+        const nuevoSentido = document.getElementById('editSentidoParada').value;
+        
+        if (!nuevoNombre) {
+            alert("El nombre no puede estar vacío");
+            return;
+        }
+        
+        fetch("/admin-panel/editar_parada/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken")
+            },
+            body: JSON.stringify({ 
+                id: paradaEditandoId, 
+                nombre: nuevoNombre, 
+                sentido: nuevoSentido 
+            })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === "success") {
+                    // Actualizar el marcador en el mapa
+                    const marker = markersParadas.find(m => m.paradaId === paradaEditandoId);
+                    if (marker) {
+                        // Actualizar el título del marcador
+                        marker.setTitle(nuevoNombre);
+                        
+                        // Actualizar el contenido del infowindow
+                        const sentidoHtml = nuevoSentido ? `<br><small>Sentido: ${nuevoSentido}</small><br>` : '<br>';
+                        marker.infowindow.setContent(`<div style="min-width: 180px;">
+                            <strong>${nuevoNombre}</strong>
+                            ${sentidoHtml}
+                            <br>
+                            <button class="btn btn-primary" onclick="abrirModalEditar(${paradaEditandoId})" style="margin-top:5px;">Editar</button>
+                            <button class="btn btn-danger" onclick="eliminarParada(${paradaEditandoId}, this)" style="margin-top:5px;">Eliminar</button>
+                        </div>`);
+                    }
+                    
+                    cerrarModalEdicion();
+                    alert("Parada actualizada correctamente");
+                } else {
+                    alert("Error: " + data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Error al guardar:", error);
+                alert("Error de conexión al guardar los cambios");
+            });
+    }
 
     /* ===============================
        COOKIE HELPER
     =============================== */
-
     function getCookie(name) {
         let cookieValue = null;
-
         if (document.cookie && document.cookie !== "") {
             document.cookie.split(";").forEach(c => {
                 c = c.trim();
@@ -203,14 +433,12 @@
                 }
             });
         }
-
         return cookieValue;
     }
 
     /* ===============================
        ELIMINAR PARADA
     =============================== */
-
     function eliminarParada(idParada, boton) {
         if (!confirm("¿Estás seguro de que deseas eliminar esta parada?")) return;
 
@@ -225,15 +453,14 @@
             .then(r => r.json())
             .then(data => {
                 if (data.status === "success") {
-                    // Buscar el marcador por id y removerlo
-                    const marker = window.markersParadas.find(m => m.paradaId === idParada);
-                    if (marker) {
-                        marker.setMap(null); // quita del mapa
-                        marker.infowindow.close(); // cierra info window
-                        // remover del array
-                        window.markersParadas = window.markersParadas.filter(m => m.paradaId !== idParada);
+                    const markerIndex = markersParadas.findIndex(m => m.paradaId === idParada);
+                    if (markerIndex !== -1) {
+                        markersParadas[markerIndex].setMap(null);
+                        if (markersParadas[markerIndex].infowindow) {
+                            markersParadas[markerIndex].infowindow.close();
+                        }
+                        markersParadas.splice(markerIndex, 1);
                     }
-
                     alert("Parada eliminada correctamente.");
                 } else {
                     alert("Error al eliminar la parada: " + data.message);
@@ -242,8 +469,9 @@
     }
 </script>
 
+<!-- Cargar Google Maps -->
 <script async
     src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&callback=inicializarMapa&libraries=geometry,drawing">
-    </script>
+</script>
 
 {% endblock %}

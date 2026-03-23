@@ -12,9 +12,12 @@ class Ruta(models.Model):
 
 class Parada(models.Model):
     nombre = models.CharField(max_length=100)
-    latitud = models.FloatField()
-    longitud = models.FloatField()
+    lat = models.FloatField()
+    lng = models.FloatField()
     ruta = models.ForeignKey(Ruta, on_delete=models.CASCADE, related_name="paradas")
-
+    sentido = models.CharField(max_length=100, blank=True, null=True)  # Campo agregado
+    
     def __str__(self):
-        return self.nombrea
+        if self.sentido:
+            return f"{self.nombre} (Hacia: {self.sentido})"
+        return self.nombre

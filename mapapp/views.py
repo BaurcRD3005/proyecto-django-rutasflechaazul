@@ -4,61 +4,129 @@ import json
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.conf import settings
+from django.views.decorators.http import require_GET
 
 from adminpanel.models import Ruta, RutaParada, HorarioRuta, Parada, TarifaRuta
 
 
 # ==============================
-# MAPA PRINCIPAL
+# UTILIDADES
 # ==============================
 
+def calcular_distancia(lat1, lng1, lat2, lng2):
+    """Distancia en km (Haversine)"""
+    R = 6371
+
+    dLat = math.radians(lat2 - lat1)
+    dLng = math.radians(lng2 - lng1)
+
+    a = (
+        math.sin(dLat / 2) ** 2 +
+        math.cos(math.radians(lat1)) *
+        math.cos(math.radians(lat2)) *
+        math.sin(dLng / 2) ** 2
+    )
+
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def parsear_coordenadas(coordenadas):
+    if not coordenadas:
+        return []
+    if isinstance(coordenadas, str):
+        return json.loads(coordenadas)
+    return coordenadas
+
+
+# ==============================
+# VISTAS PRINCIPALES
+# ==============================
+
+def index(request):
+    return render(request, "mapapp/index.html")
+
+
 def mapa(request):
-
     rutas = Ruta.objects.all()
-
     rutas_data = []
 
     for r in rutas:
-
         paradas = RutaParada.objects.filter(ruta=r).order_by("orden")
-
         horario = HorarioRuta.objects.filter(ruta=r).first()
 
         rutas_data.append({
             "id": r.id,
             "nombre": r.nombre,
             "color": r.color,
-            "coordenadas": (
-                    json.loads(r.coordenadas)
-                    if isinstance(r.coordenadas, str)
-                    else r.coordenadas
-                    ) if r.coordenadas else [],
+            "coordenadas": parsear_coordenadas(r.coordenadas),
 
-            "horario": f"{horario.primer_viaje.strftime('%I:%M %p')} - {horario.ultimo_viaje.strftime('%I:%M %p')}" if horario else None,
+            "horario": (
+                f"{horario.primer_viaje.strftime('%I:%M %p')} - "
+                f"{horario.ultimo_viaje.strftime('%I:%M %p')}"
+                if horario else None
+            ),
             "frecuencia": f"{horario.frecuencia} min" if horario else None,
 
-            "paradas":[
+            "paradas": [
                 {
                     "nombre": p.parada.nombre,
-                    "lat": p.parada.lat,
-                    "lng": p.parada.lng
+                    "lat": float(p.parada.lat),
+                    "lng": float(p.parada.lng),
                 }
                 for p in paradas
             ]
         })
 
-    return render(request,"mapapp/mapa.html",{
+    return render(request, "mapapp/mapa.html", {
         "rutas": rutas_data,
         "GOOGLE_MAPS_API_KEY": settings.GOOGLE_MAPS_API_KEY
     })
 
 
-# ==============================
-# PAGINAS
-# ==============================
+def zonas(request):
+    # Usar modelos de adminpanel
+    from adminpanel.models import Parada, HorarioRuta, TarifaRuta
+    
+    paradas = Parada.objects.all()
+    horarios = HorarioRuta.objects.select_related("ruta", "origen", "destino")
+    tarifas = TarifaRuta.objects.select_related("ruta", "origen", "destino")
 
-def index(request):
-    return render(request, "mapapp/index.html")
+    tarifas_dict = {
+        (t.ruta_id, t.origen_id, t.destino_id): t
+        for t in tarifas
+    }
+
+    data_horarios = []
+
+    for h in horarios:
+        tarifa = tarifas_dict.get((h.ruta_id, h.origen_id, h.destino_id))
+
+        data_horarios.append({
+            "ruta": h.ruta.nombre,
+            "origen": h.origen.nombre,
+            "destino": h.destino.nombre,
+            "primer_viaje": str(h.primer_viaje),
+            "ultimo_viaje": str(h.ultimo_viaje),
+            "frecuencia": h.frecuencia,
+            "tarifa": float(tarifa.tarifa) if tarifa else 0,
+            "descuento": float(tarifa.descuento) if tarifa else 0,
+        })
+
+    data_paradas = [
+        {
+            "nombre": p.nombre,
+            "lat": float(p.lat),
+            "lng": float(p.lng),
+            "sentido": p.sentido if p.sentido else "Sin sentido"
+        }
+        for p in paradas
+    ]
+
+    return render(request, "mapapp/zonas.html", {
+        "paradas_json": data_paradas,
+        "horarios_json": data_horarios,
+        "GOOGLE_MAPS_API_KEY": settings.GOOGLE_MAPS_API_KEY
+    })
 
 
 def resultado(request):
@@ -66,142 +134,145 @@ def resultado(request):
 
 
 # ==============================
-# ZONAS
-# ==============================
-def zonas(request):
-    paradas = Parada.objects.all()
-
-    paradas_data = [
-        {"nombre": p.nombre, "lat": float(p.lat), "lng": float(p.lng)}
-        for p in paradas
-    ]
-
-    return render(request, "mapapp/zonas.html", {
-        "paradas_json": json.dumps(paradas_data),
-        "GOOGLE_MAPS_API_KEY": settings.GOOGLE_MAPS_API_KEY
-    })
-
-
-
-# ==============================
-# BUSCAR RUTAS POR UBICACION
+# API: BUSCAR RUTA
 # ==============================
 
-def buscar_rutas(request):
-
-    lat = float(request.GET.get("lat"))
-    lng = float(request.GET.get("lng"))
-
-    paradas = Parada.objects.all()
-
-    parada_cercana = None
-    distancia_min = 999
-
-    for p in paradas:
-
-        d = math.sqrt((p.lat - lat)**2 + (p.lng - lng)**2)
-
-        if d < distancia_min:
-            distancia_min = d
-            parada_cercana = p
-
-    if not parada_cercana:
-        return JsonResponse({"error": "No parada cercana"})
-
-    ruta_parada = RutaParada.objects.filter(parada=parada_cercana).first()
-
-    if not ruta_parada:
-        return JsonResponse({"error": "No hay ruta"})
-
-    ruta = ruta_parada.ruta
-
-    paradas_ruta = RutaParada.objects.filter(ruta=ruta).order_by("orden")
-
-    return JsonResponse({
-        "parada_cercana": {
-            "nombre": parada_cercana.nombre,
-            "lat": parada_cercana.lat,
-            "lng": parada_cercana.lng
-        },
-        "ruta": {
-            "nombre": ruta.nombre,
-            "color": ruta.color,
-             "coordenadas": ruta.coordenadas,
-            "paradas": [
-                {
-                    "nombre": rp.parada.nombre,
-                    "lat": rp.parada.lat,
-                    "lng": rp.parada.lng
-                }
-                for rp in paradas_ruta
-            ]
-        }
-    })
-
-# ==============================
-# BUSCAR ZONA
-# ==============================
+@require_GET
 def buscar_zona(request):
+    destino_input = request.GET.get("zona")
+    origen_input = request.GET.get("origen")
     lat = request.GET.get("lat")
     lng = request.GET.get("lng")
-    zona = request.GET.get("zona")
-    direccion = request.GET.get("direccion")  # NUEVO: origen/destino seleccionado
 
-    if not zona:
-        return JsonResponse({"error": "Destino requerido"})
+    if not destino_input:
+        return JsonResponse({"error": "Destino requerido"}, status=400)
 
-    parada_destino = Parada.objects.filter(nombre__icontains=zona.strip()).first()
-    if not parada_destino:
-        return JsonResponse({"error": "Destino no encontrado"})
+    destino_limpio = destino_input.strip().lower()
+    
+    # Variable para almacenar todas las rutas posibles
+    rutas_encontradas = []
+    
+    rutas = Ruta.objects.all()
 
-    # Filtrar rutas que tengan esta parada como parte de la ruta
-    rutas_posibles = RutaParada.objects.filter(parada=parada_destino)
-    if direccion:
-        rutas_posibles = rutas_posibles.filter(ruta__destino__iexact=direccion.strip())
-
-    ruta_parada_destino = rutas_posibles.first()
-    if not ruta_parada_destino:
-        return JsonResponse({"error": "Destino sin ruta para esa dirección"})
-
-    ruta = ruta_parada_destino.ruta
-    paradas_ruta = list(RutaParada.objects.filter(ruta=ruta).order_by("orden"))
-
-    # Buscar parada origen más cercana
-    parada_origen = None
-    if lat and lng:
-        lat, lng = float(lat), float(lng)
-        distancia_min = float('inf')
-        for p in paradas_ruta:
-            d = math.sqrt((p.parada.lat - lat)**2 + (p.parada.lng - lng)**2)
-            if d < distancia_min:
-                distancia_min = d
-                parada_origen = p
-
-    if not parada_origen:
-        parada_origen = ruta_parada_destino
-
-    orden_origen = parada_origen.orden
-    orden_destino = ruta_parada_destino.orden
-
-    # Filtrar tramo según orden
-    if orden_origen <= orden_destino:
-        tramo = [p for p in paradas_ruta if orden_origen <= p.orden <= orden_destino]
+    for ruta in rutas:
+        paradas_ruta = list(
+            RutaParada.objects.filter(ruta=ruta).order_by("orden")
+        )
+        
+        # Buscar coincidencias de destino
+        destinos = [
+            p for p in paradas_ruta
+            if destino_limpio in p.parada.nombre.lower()
+        ]
+        
+        if not destinos:
+            continue
+        
+        # Buscar origen
+        origenes = []
+        
+        # CASO 1: ubicación actual
+        if lat and lng:
+            lat_f, lng_f = float(lat), float(lng)
+            parada_cercana = min(
+                paradas_ruta,
+                key=lambda p: calcular_distancia(
+                    lat_f, lng_f,
+                    float(p.parada.lat),
+                    float(p.parada.lng)
+                )
+            )
+            origenes = [parada_cercana]
+        
+        # CASO 2: origen escrito
+        elif origen_input:
+            origen_limpio = origen_input.strip().lower()
+            origenes = [
+                p for p in paradas_ruta
+                if origen_limpio in p.parada.nombre.lower()
+            ]
+        
+        # CASO 3: fallback
+        else:
+            origenes = [paradas_ruta[0]]
+        
+        # Buscar combinaciones válidas
+        for o in origenes:
+            for d in destinos:
+                idx_origen = paradas_ruta.index(o)
+                idx_destino = paradas_ruta.index(d)
+                
+                # Permitir ambos sentidos de la ruta
+                if idx_origen != idx_destino:  # No son la misma parada
+                    rutas_encontradas.append({
+                        "ruta": ruta,
+                        "paradas": paradas_ruta,
+                        "origen": o,
+                        "destino": d,
+                        "idx_origen": idx_origen,
+                        "idx_destino": idx_destino,
+                        "sentido": "ida" if idx_origen < idx_destino else "vuelta"
+                    })
+    
+    if not rutas_encontradas:
+        return JsonResponse({
+            "error": f"No se encontró una ruta entre '{origen_input}' y '{destino_input}'. Verifica que ambas paradas pertenezcan a la misma ruta."
+        }, status=404)
+    
+    # Ordenar por proximidad (priorizar rutas con origen antes que destino)
+    rutas_encontradas.sort(key=lambda x: (
+        0 if x["sentido"] == "ida" else 1,  # Priorizar ida
+        abs(x["idx_destino"] - x["idx_origen"])  # Menor distancia entre paradas
+    ))
+    
+    mejor = rutas_encontradas[0]
+    
+    # Obtener los vértices personalizados de la ruta (si existen)
+    vertices = parsear_coordenadas(mejor["ruta"].coordenadas)
+    
+    # Si el origen está después del destino, invertir la lista de paradas
+    if mejor["idx_origen"] > mejor["idx_destino"]:
+        paradas_recortadas = mejor["paradas"][mejor["idx_destino"]:mejor["idx_origen"] + 1]
+        paradas_recortadas.reverse()
+        # Para el JSON, usamos el orden correcto
+        paradas_para_json = [{
+            "nombre": p.parada.nombre,
+            "lat": float(p.parada.lat),
+            "lng": float(p.parada.lng)
+        } for p in paradas_recortadas]
+        
+        # Si hay vértices, también los invertimos para mantener el orden correcto
+        if vertices:
+            vertices = list(reversed(vertices))
     else:
-        tramo = [p for p in paradas_ruta if orden_destino <= p.orden <= orden_origen]
-
-    paradas = [
-        {"nombre": p.parada.nombre, "lat": p.parada.lat, "lng": p.parada.lng}
-        for p in tramo
-    ]
-
-    coordenadas = json.loads(ruta.coordenadas) if isinstance(ruta.coordenadas, str) else ruta.coordenadas or []
-
-    return JsonResponse({
-        "ruta": ruta.nombre,
-        "color": ruta.color,
-        "coordenadas": coordenadas,
-        "paradas": paradas
-    })
+        paradas_para_json = [{
+            "nombre": p.parada.nombre,
+            "lat": float(p.parada.lat),
+            "lng": float(p.parada.lng)
+        } for p in mejor["paradas"][mejor["idx_origen"]:mejor["idx_destino"] + 1]]
+    
+    # Preparar la respuesta
+    response_data = {
+        "ruta": mejor["ruta"].nombre,
+        "color": mejor["ruta"].color,
+        "paradas": [{
+            "nombre": p.parada.nombre,
+            "lat": float(p.parada.lat),
+            "lng": float(p.parada.lng)
+        } for p in mejor["paradas"]],
+        "origen": mejor["origen"].parada.nombre,
+        "destino": mejor["destino"].parada.nombre,
+        "sentido": mejor["sentido"]
+    }
+    
+    # Añadir vértices si existen (igual que en mapa.html)
+    if vertices:
+        response_data["vertices"] = [{
+            "lat": float(v["lat"]),
+            "lng": float(v["lng"])
+        } for v in vertices]
+    
+    return JsonResponse(response_data)
     
 # ==============================
 # HORARIOS + TARIFAS
@@ -210,29 +281,29 @@ def buscar_zona(request):
 def horarios(request):
 
     horarios = HorarioRuta.objects.select_related(
-        "ruta",
-        "origen",
-        "destino"
+        "ruta", "origen", "destino"
     )
 
-    tarifas = TarifaRuta.objects.select_related("ruta", "origen", "destino")
+    tarifas = TarifaRuta.objects.select_related(
+        "ruta", "origen", "destino"
+    )
 
-    # diccionario por ruta + origen + destino
     tarifas_dict = {
         (t.ruta_id, t.origen_id, t.destino_id): t
         for t in tarifas
     }
 
-    datos = []
+    data = []
 
     for h in horarios:
+        tarifa = tarifas_dict.get(
+            (h.ruta_id, h.origen_id, h.destino_id)
+        )
 
-        tarifa = tarifas_dict.get((h.ruta_id, h.origen_id, h.destino_id))
-
-        datos.append({
-            "ruta__nombre": h.ruta.nombre if h.ruta else "",
-            "origen__nombre": h.origen.nombre,
-            "destino__nombre": h.destino.nombre,
+        data.append({
+            "ruta": h.ruta.nombre,
+            "origen": h.origen.nombre,
+            "destino": h.destino.nombre,
             "primer_viaje": str(h.primer_viaje),
             "ultimo_viaje": str(h.ultimo_viaje),
             "frecuencia": h.frecuencia,
@@ -241,5 +312,6 @@ def horarios(request):
         })
 
     return render(request, "mapapp/horarios.html", {
-        "horarios_json": datos
+        "horarios": horarios, 
+        "horarios_json": data
     })

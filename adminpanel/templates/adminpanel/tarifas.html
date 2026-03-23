@@ -6,25 +6,145 @@
 {% block content %}
 
 <style>
+    /* Estilos igual que antes */
+    .chart-card h3 {
+        font-weight: bold;
+        color: var(--negro);
+        margin-bottom: 1rem;
+    }
+    
+    .chart-card h4 {
+        font-weight: bold;
+        color: var(--azul-secundario);
+        margin-bottom: 0.5rem;
+    }
+    
     .schedules-table {
         width: 100%;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
+        border-radius: var(--radio-borde);
+        overflow: hidden;
+        min-width: 800px;
     }
-
-    .schedules-table th {
-        background: #1e40af;
-        color: white;
-        padding: 12px;
-        text-align: left;
-    }
-
+    
+    .schedules-table th,
     .schedules-table td {
-        padding: 12px;
-        border-bottom: 1px solid #ddd;
+        padding: 1rem;
+        border-bottom: 1px solid var(--gris-claro);
+        font-weight: bold;
     }
-
-    .schedules-table tr:hover {
-        background: #f1f5f9;
+    
+    .schedules-table th {
+        background: linear-gradient(135deg, var(--azul-primario), var(--azul-secundario));
+        color: white;
+    }
+    
+    .schedules-table tbody tr:hover {
+        background: var(--azul-suave);
+    }
+    
+    .schedules-table th:first-child {
+        border-top-left-radius: var(--radio-borde);
+    }
+    
+    .schedules-table th:last-child {
+        border-top-right-radius: var(--radio-borde);
+    }
+    
+    .pagination-container {
+        margin-top: 2rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .pagination {
+        display: flex;
+        gap: 0.5rem;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .pagination li {
+        display: inline-block;
+    }
+    
+    .pagination a, .pagination span {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--gris-claro);
+        border-radius: var(--radio-borde);
+        text-decoration: none;
+        color: var(--azul-primario);
+        transition: all 0.3s ease;
+    }
+    
+    .pagination a:hover {
+        background: var(--azul-primario);
+        color: white;
+        border-color: var(--azul-primario);
+    }
+    
+    .pagination .active span {
+        background: var(--azul-primario);
+        color: white;
+        border-color: var(--azul-primario);
+    }
+    
+    .page-size-selector {
+        padding: 0.5rem;
+        border-radius: var(--radio-borde);
+        border: 1px solid var(--gris-claro);
+    }
+    
+    .search-box {
+        margin-bottom: 1rem;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .search-input {
+        padding: 0.5rem;
+        border: 1px solid var(--gris-claro);
+        border-radius: var(--radio-borde);
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .records-info {
+        margin-top: 1rem;
+        text-align: center;
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .alert {
+        padding: 1rem;
+        border-radius: var(--radio-borde);
+        margin-bottom: 1rem;
+        display: none;
+    }
+    
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
     }
 </style>
 
@@ -33,44 +153,58 @@
 {{ paradas_ruta_json|json_script:"paradas-ruta-data" }}
 
 <div class="chart-card">
-
     <div class="chart-header">
         <h3 class="chart-title">Crear Tarifa</h3>
     </div>
-
+    
+    <!-- Alertas -->
+    <div id="alertMessage" class="alert" style="display: none;"></div>
+    
     <!-- FORMULARIO -->
     <div style="margin-bottom:1rem">
-
         <select id="ruta" class="table-search">
-            <option value="">Ruta</option>
+            <option value="">Seleccionar Ruta</option>
             {% for r in rutas %}
             <option value="{{ r.id }}">{{ r.nombre }}</option>
             {% endfor %}
         </select>
-
+        
         <select id="origen" class="table-search">
-            <option value="">Origen</option>
+            <option value="">Seleccionar Origen</option>
             {% for p in paradas %}
             <option value="{{ p.id }}">{{ p.nombre }}</option>
             {% endfor %}
         </select>
-
+        
         <select id="destino" class="table-search">
-            <option value="">Destino</option>
+            <option value="">Seleccionar Destino</option>
             {% for p in paradas %}
             <option value="{{ p.id }}">{{ p.nombre }}</option>
             {% endfor %}
         </select>
-
-        <input type="number" id="tarifa" placeholder="Tarifa" class="table-search">
-        <input type="number" id="descuento" placeholder="Descuento" class="table-search">
-
+        
+        <input type="number" id="tarifa" placeholder="Tarifa" class="table-search" step="0.01">
+        <input type="number" id="descuento" placeholder="Descuento" class="table-search" step="0.01" value="0">
+        
         <button type="button" onclick="crearTarifa()" class="btn btn-primary">
             Guardar
         </button>
-
+        <button type="button" onclick="cancelarEdicion()" class="btn btn-secondary" id="btnCancelar" style="display: none;">
+            Cancelar
+        </button>
     </div>
-
+    
+    <!-- BÚSQUEDA -->
+    <div class="search-box">
+        <input type="text" id="searchInput" class="search-input" placeholder="Buscar por ruta, origen o destino...">
+        <select id="pageSizeSelect" class="page-size-selector">
+            <option value="10">10 por página</option>
+            <option value="25" selected>25 por página</option>
+            <option value="50">50 por página</option>
+            <option value="100">100 por página</option>
+        </select>
+    </div>
+    
     <!-- TABLA -->
     <table class="schedules-table">
         <thead>
@@ -83,182 +217,460 @@
                 <th>Acciones</th>
             </tr>
         </thead>
-
         <tbody id="tablaTarifas">
-            {% for t in tarifas %}
-            <tr id="fila{{t.id}}">
-                <td>{{t.ruta.nombre}}</td>
-                <td>{{t.origen.nombre}}</td>
-                <td>{{t.destino.nombre}}</td>
-                <td>${{t.tarifa}}</td>
-                <td>${{t.descuento}}</td>
-                <td>
-                    <button class="btnEditar" data-id="{{t.id}}">
-                        Editar
-                    </button>
-                    <button class="btnEliminar" data-id="{{t.id}}">
-                        Eliminar
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
+            <!-- Las filas se cargarán dinámicamente con JavaScript -->
         </tbody>
     </table>
-
+    
+    <!-- PAGINACIÓN -->
+    <div class="pagination-container">
+        <div class="pagination" id="pagination"></div>
+    </div>
+    <div class="records-info" id="recordsInfo"></div>
 </div>
 
 {% endblock %}
 
 {% block extra_js_scripts %}
 <script>
-
-    const tarifasData = JSON.parse(
-        document.getElementById("tarifas-data").textContent
-    );
-
-    const paradasRuta = JSON.parse(
-        document.getElementById("paradas-ruta-data").textContent
-    );
-
+    // Variables globales
+    let todasLasTarifas = [];
+    let currentPage = 1;
+    let pageSize = 25;
+    let searchTerm = '';
+    let tarifaEditando = null;
+    
+    // Función para mostrar alertas
+    function mostrarAlerta(mensaje, tipo = 'error') {
+        const alertDiv = document.getElementById('alertMessage');
+        alertDiv.textContent = mensaje;
+        alertDiv.className = `alert alert-${tipo}`;
+        alertDiv.style.display = 'block';
+        
+        setTimeout(() => {
+            alertDiv.style.display = 'none';
+        }, 5000);
+    }
+    
+    // Función para cancelar edición
+    function cancelarEdicion() {
+        tarifaEditando = null;
+        document.getElementById('btnCancelar').style.display = 'none';
+        document.getElementById('ruta').value = '';
+        document.getElementById('origen').value = '';
+        document.getElementById('destino').value = '';
+        document.getElementById('tarifa').value = '';
+        document.getElementById('descuento').value = '0';
+        
+        // Resetear selects de origen y destino
+        const rutaId = document.getElementById('ruta').value;
+        if (rutaId && paradasRuta[rutaId]) {
+            actualizarParadasPorRuta(rutaId);
+        }
+    }
+    
+    // Función para obtener CSRF token de manera más robusta
     function getCookie(name) {
         let cookieValue = null;
-
-        if (document.cookie && document.cookie !== "") {
-            document.cookie.split(";").forEach(c => {
-                c = c.trim();
-
-                if (c.startsWith(name + "=")) {
-                    cookieValue = decodeURIComponent(
-                        c.substring(name.length + 1)
-                    );
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
                 }
-            });
+            }
         }
-
         return cookieValue;
     }
-
-    function crearTarifa() {
-
+    
+    // Función para hacer fetch con manejo de errores
+    async function fetchWithCSRF(url, options = {}) {
+        const csrftoken = getCookie('csrftoken');
+        
+        const defaultOptions = {
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+        };
+        
+        const mergedOptions = { ...defaultOptions, ...options };
+        
+        try {
+            const response = await fetch(url, mergedOptions);
+            
+            if (!response.ok) {
+                if (response.status === 403) {
+                    throw new Error('Error de autenticación. Por favor, recarga la página.');
+                }
+                const text = await response.text();
+                throw new Error(`Error ${response.status}: ${text.substring(0, 100)}`);
+            }
+            
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return await response.json();
+            } else {
+                const text = await response.text();
+                throw new Error('El servidor no respondió con JSON válido');
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            throw error;
+        }
+    }
+    
+    // Cargar datos del JSON
+    let tarifasData = [];
+    let paradasRuta = {};
+    
+    try {
+        const tarifasScript = document.getElementById("tarifas-data");
+        const paradasScript = document.getElementById("paradas-ruta-data");
+        
+        if (tarifasScript && tarifasScript.textContent) {
+            tarifasData = JSON.parse(tarifasScript.textContent);
+            console.log('Tarifas cargadas:', tarifasData.length);
+        } else {
+            console.warn('No se encontraron datos de tarifas');
+            tarifasData = [];
+        }
+        
+        if (paradasScript && paradasScript.textContent) {
+            paradasRuta = JSON.parse(paradasScript.textContent);
+            console.log('Paradas por ruta:', Object.keys(paradasRuta).length);
+        } else {
+            console.warn('No se encontraron datos de paradas por ruta');
+            paradasRuta = {};
+        }
+    } catch (e) {
+        console.error('Error parsing JSON:', e);
+        tarifasData = [];
+        paradasRuta = {};
+        mostrarAlerta('Error al cargar los datos', 'error');
+    }
+    
+    // Inicializar datos
+    function initData() {
+        todasLasTarifas = tarifasData;
+        renderTable();
+    }
+    
+    // Función para filtrar datos por búsqueda
+    function filterData() {
+        if (!searchTerm) return todasLasTarifas;
+        
+        const term = searchTerm.toLowerCase();
+        return todasLasTarifas.filter(tarifa => {
+            const rutaNombre = (tarifa.ruta_nombre || tarifa.ruta?.nombre || '').toLowerCase();
+            const origenNombre = (tarifa.origen_nombre || tarifa.origen?.nombre || '').toLowerCase();
+            const destinoNombre = (tarifa.destino_nombre || tarifa.destino?.nombre || '').toLowerCase();
+            
+            return rutaNombre.includes(term) || 
+                   origenNombre.includes(term) || 
+                   destinoNombre.includes(term);
+        });
+    }
+    
+    // Función para paginar datos
+    function paginateData(data) {
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        return data.slice(startIndex, endIndex);
+    }
+    
+    // Función auxiliar para obtener nombre de ruta
+    function getRutaNombre(tarifa) {
+        if (tarifa.ruta_nombre) return tarifa.ruta_nombre;
+        if (tarifa.ruta && tarifa.ruta.nombre) return tarifa.ruta.nombre;
+        return 'Sin ruta';
+    }
+    
+    // Función auxiliar para obtener nombre de origen
+    function getOrigenNombre(tarifa) {
+        if (tarifa.origen_nombre) return tarifa.origen_nombre;
+        if (tarifa.origen && tarifa.origen.nombre) return tarifa.origen.nombre;
+        return 'Sin origen';
+    }
+    
+    // Función auxiliar para obtener nombre de destino
+    function getDestinoNombre(tarifa) {
+        if (tarifa.destino_nombre) return tarifa.destino_nombre;
+        if (tarifa.destino && tarifa.destino.nombre) return tarifa.destino.nombre;
+        return 'Sin destino';
+    }
+    
+    // Función para actualizar paradas según ruta seleccionada
+    function actualizarParadasPorRuta(rutaId) {
+        const origenSelect = document.getElementById("origen");
+        const destinoSelect = document.getElementById("destino");
+        
+        origenSelect.innerHTML = "<option value=''>Seleccionar Origen</option>";
+        destinoSelect.innerHTML = "<option value=''>Seleccionar Destino</option>";
+        
+        if (rutaId && paradasRuta[rutaId]) {
+            paradasRuta[rutaId].forEach(p => {
+                const option1 = document.createElement("option");
+                option1.value = p.id;
+                option1.textContent = p.nombre;
+                const option2 = option1.cloneNode(true);
+                origenSelect.appendChild(option1);
+                destinoSelect.appendChild(option2);
+            });
+        }
+    }
+    
+    // Función para renderizar la tabla
+    function renderTable() {
+        const filteredData = filterData();
+        const totalRecords = filteredData.length;
+        const totalPages = Math.ceil(totalRecords / pageSize);
+        
+        if (currentPage > totalPages && totalPages > 0) {
+            currentPage = totalPages;
+        } else if (totalPages === 0) {
+            currentPage = 1;
+        }
+        
+        const paginatedData = paginateData(filteredData);
+        const tbody = document.getElementById('tablaTarifas');
+        tbody.innerHTML = '';
+        
+        if (paginatedData.length === 0) {
+            const row = tbody.insertRow();
+            const cell = row.insertCell(0);
+            cell.colSpan = 6;
+            cell.textContent = 'No hay tarifas registradas';
+            cell.style.textAlign = 'center';
+            cell.style.padding = '2rem';
+        } else {
+            paginatedData.forEach(tarifa => {
+                const row = tbody.insertRow();
+                row.id = `fila${tarifa.id}`;
+                
+                row.insertCell(0).textContent = getRutaNombre(tarifa);
+                row.insertCell(1).textContent = getOrigenNombre(tarifa);
+                row.insertCell(2).textContent = getDestinoNombre(tarifa);
+                row.insertCell(3).textContent = `$${parseFloat(tarifa.tarifa).toFixed(2)}`;
+                row.insertCell(4).textContent = `$${parseFloat(tarifa.descuento).toFixed(2)}`;
+                
+                const accionesCell = row.insertCell(5);
+                accionesCell.innerHTML = `
+                    <div class="btn-group">
+                        <button class="btn btn-primary btnEditar" data-id="${tarifa.id}">
+                            Editar
+                        </button>
+                        <button class="btn btn-danger btnEliminar" data-id="${tarifa.id}">
+                            Eliminar
+                        </button>
+                    </div>
+                `;
+            });
+        }
+        
+        asignarEventosBotones();
+        renderPagination(totalPages, totalRecords);
+        
+        if (totalRecords > 0) {
+            const startRecord = (currentPage - 1) * pageSize + 1;
+            const endRecord = Math.min(currentPage * pageSize, totalRecords);
+            document.getElementById('recordsInfo').textContent = 
+                `Mostrando ${startRecord} - ${endRecord} de ${totalRecords} registros`;
+        } else {
+            document.getElementById('recordsInfo').textContent = 'No hay registros para mostrar';
+        }
+    }
+    
+    // Función para renderizar paginación
+    function renderPagination(totalPages, totalRecords) {
+        const paginationDiv = document.getElementById('pagination');
+        
+        if (totalPages <= 1 && totalRecords === 0) {
+            paginationDiv.innerHTML = '';
+            return;
+        }
+        
+        let paginationHtml = '<ul class="pagination">';
+        paginationHtml += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a href="#" onclick="changePage(${currentPage - 1}); return false;">« Anterior</a>
+        </li>`;
+        
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+        
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+        
+        if (startPage > 1) {
+            paginationHtml += `<li><a href="#" onclick="changePage(1); return false;">1</a></li>`;
+            if (startPage > 2) paginationHtml += `<li><span>...</span></li>`;
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHtml += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                <a href="#" onclick="changePage(${i}); return false;">${i}</a>
+            </li>`;
+        }
+        
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) paginationHtml += `<li><span>...</span></li>`;
+            paginationHtml += `<li><a href="#" onclick="changePage(${totalPages}); return false;">${totalPages}</a></li>`;
+        }
+        
+        paginationHtml += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a href="#" onclick="changePage(${currentPage + 1}); return false;">Siguiente »</a>
+        </li>`;
+        paginationHtml += '</ul>';
+        paginationDiv.innerHTML = paginationHtml;
+    }
+    
+    function changePage(page) {
+        const filteredData = filterData();
+        const totalPages = Math.ceil(filteredData.length / pageSize);
+        
+        if (page >= 1 && page <= totalPages) {
+            currentPage = page;
+            renderTable();
+        }
+    }
+    
+    function changePageSize() {
+        pageSize = parseInt(document.getElementById('pageSizeSelect').value);
+        currentPage = 1;
+        renderTable();
+    }
+    
+    function searchTarifas() {
+        searchTerm = document.getElementById('searchInput').value;
+        currentPage = 1;
+        renderTable();
+    }
+    
+    function asignarEventosBotones() {
+        document.querySelectorAll(".btnEliminar").forEach(btn => {
+            btn.removeEventListener('click', eliminarHandler);
+            btn.addEventListener('click', eliminarHandler);
+        });
+        
+        document.querySelectorAll(".btnEditar").forEach(btn => {
+            btn.removeEventListener('click', editarHandler);
+            btn.addEventListener('click', editarHandler);
+        });
+    }
+    
+    async function eliminarHandler(e) {
+        const id = e.currentTarget.dataset.id;
+        if (confirm('¿Estás seguro de eliminar esta tarifa?')) {
+            try {
+                await eliminarTarifa(id);
+            } catch (error) {
+                mostrarAlerta(error.message, 'error');
+            }
+        }
+    }
+    
+    function editarHandler(e) {
+        const id = e.currentTarget.dataset.id;
+        const tarifa = todasLasTarifas.find(t => t.id == id);
+        if (tarifa) {
+            document.getElementById("ruta").value = tarifa.ruta || tarifa.ruta_id || '';
+            document.getElementById("origen").value = tarifa.origen || tarifa.origen_id || '';
+            document.getElementById("destino").value = tarifa.destino || tarifa.destino_id || '';
+            document.getElementById("tarifa").value = tarifa.tarifa;
+            document.getElementById("descuento").value = tarifa.descuento;
+            tarifaEditando = id;
+            document.getElementById('btnCancelar').style.display = 'inline-block';
+            
+            // Actualizar paradas según la ruta seleccionada
+            const rutaId = document.getElementById("ruta").value;
+            if (rutaId) {
+                actualizarParadasPorRuta(rutaId);
+            }
+        }
+    }
+    
+    async function crearTarifa() {
         const ruta = document.getElementById("ruta").value;
         const origen = document.getElementById("origen").value;
         const destino = document.getElementById("destino").value;
-
+        const tarifa = document.getElementById("tarifa").value;
+        const descuento = document.getElementById("descuento").value || 0;
+        
         if (!ruta || !origen || !destino) {
-            alert("Selecciona ruta, origen y destino");
+            mostrarAlerta("Selecciona ruta, origen y destino", "error");
             return;
         }
-
-        let url = "/admin-panel/crear_tarifa/";
-
-        if (window.tarifaEditando) {
-            url = "/admin-panel/editar_tarifa/" + window.tarifaEditando + "/";
+        
+        if (!tarifa) {
+            mostrarAlerta("Ingresa la tarifa", "error");
+            return;
         }
-
-        fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": getCookie("csrftoken")
-            },
-            body: JSON.stringify({
-                ruta: ruta,
-                origen: origen,
-                destino: destino,
-                tarifa: document.getElementById("tarifa").value,
-                descuento: document.getElementById("descuento").value
-            })
-        })
-            .then(r => r.json())
-            .then(data => {
-                location.reload();
+        
+        let url = "/admin-panel/crear_tarifa/";
+        if (tarifaEditando) {
+            url = "/admin-panel/editar_tarifa/" + tarifaEditando + "/";
+        }
+        
+        try {
+            const data = await fetchWithCSRF(url, {
+                method: "POST",
+                body: JSON.stringify({
+                    ruta: ruta,
+                    origen: origen,
+                    destino: destino,
+                    tarifa: parseFloat(tarifa),
+                    descuento: parseFloat(descuento)
+                })
             });
-    }
-
-    function eliminarTarifa(id) {
-
-        fetch("/admin-panel/eliminar_tarifa/" + id + "/", {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": getCookie("csrftoken")
+            
+            if (data.status === "ok") {
+                mostrarAlerta("Tarifa guardada correctamente", "success");
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                mostrarAlerta(data.message || "Error al guardar la tarifa", "error");
             }
-        })
-            .then(r => r.json())
-            .then(data => {
-
-                if (data.status === "ok") {
-
-                    const fila = document.getElementById("fila" + id);
-                    if (fila) fila.remove();
-
-                } else {
-                    alert("Error al eliminar tarifa");
-                }
-
-            });
-
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarAlerta(error.message, "error");
+        }
     }
-
-    document.querySelectorAll(".btnEliminar").forEach(btn => {
-
-        btn.addEventListener("click", function () {
-
-            const id = this.dataset.id;
-            eliminarTarifa(id);
-
-        });
-
-    });
-
-    document.querySelectorAll(".btnEditar").forEach(btn => {
-
-        btn.addEventListener("click", function () {
-
-            const id = this.dataset.id;
-
-            const tarifa = tarifasData.find(t => t.id == id);
-
-            if (!tarifa) return;
-
-            document.getElementById("ruta").value = tarifa.ruta;
-            document.getElementById("origen").value = tarifa.origen;
-            document.getElementById("destino").value = tarifa.destino;
-
-            document.getElementById("tarifa").value = tarifa.tarifa;
-            document.getElementById("descuento").value = tarifa.descuento;
-
-            window.tarifaEditando = id;
-
-        });
-
-    });
-
-    document.getElementById("ruta").addEventListener("change", function () {
-
+    
+    async function eliminarTarifa(id) {
+        try {
+            const data = await fetchWithCSRF("/admin-panel/eliminar_tarifa/" + id + "/", {
+                method: "POST"
+            });
+            
+            if (data.status === "ok") {
+                todasLasTarifas = todasLasTarifas.filter(t => t.id != id);
+                renderTable();
+                mostrarAlerta("Tarifa eliminada correctamente", "success");
+            } else {
+                throw new Error(data.message || "Error al eliminar tarifa");
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
+    
+    // Eventos
+    document.getElementById("searchInput").addEventListener("input", searchTarifas);
+    document.getElementById("pageSizeSelect").addEventListener("change", changePageSize);
+    
+    document.getElementById("ruta").addEventListener("change", function() {
         const rutaId = this.value;
-
-        const origenSelect = document.getElementById("origen");
-        const destinoSelect = document.getElementById("destino");
-
-        origenSelect.innerHTML = "<option value=''>Origen</option>";
-        destinoSelect.innerHTML = "<option value=''>Destino</option>";
-
-        if (!paradasRuta[rutaId]) return;
-
-        paradasRuta[rutaId].forEach(p => {
-
-            const option1 = document.createElement("option");
-            option1.value = p.id;
-            option1.textContent = p.nombre;
-
-            const option2 = option1.cloneNode(true);
-
-            origenSelect.appendChild(option1);
-            destinoSelect.appendChild(option2);
-
-        });
-
+        if (rutaId) {
+            actualizarParadasPorRuta(rutaId);
+        }
     });
-
+    
+    // Inicializar
+    initData();
 </script>
 {% endblock %}
