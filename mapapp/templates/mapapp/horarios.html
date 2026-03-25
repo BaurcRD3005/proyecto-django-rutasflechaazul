@@ -147,6 +147,28 @@
             display: inline-block;
         }
 
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--gris-medio);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--gris-oscuro);
+        }
+
+        .empty-state p {
+            font-size: 1rem;
+        }
+
         .discounts-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -356,21 +378,19 @@
     <div class="container">
         <!-- FILTROS -->
         <div class="filters-container">
-
             <div class="filter-group">
                 <label class="filter-label">Origen:</label>
                 <select class="filter-select" id="filterOrigen">
-                    <option value="all">Todos los orígenes</option>
+                    <option value="">Seleccionar origen</option>
                 </select>
             </div>
 
             <div class="filter-group">
                 <label class="filter-label">Destino:</label>
                 <select class="filter-select" id="filterDestino">
-                    <option value="all">Todos los destinos</option>
+                    <option value="">Seleccionar destino</option>
                 </select>
             </div>
-
         </div>
 
         <!-- NOTA IMPORTANTE -->
@@ -385,10 +405,8 @@
         </div>
 
         <!-- TABLA DE HORARIOS -->
-        <!-- TABLA DE HORARIOS -->
         <div class="table-container">
             <table class="schedules-table" id="schedulesTable">
-
                 <thead>
                     <tr>
                         <th><i class="fas fa-map-marker-alt"></i> Origen</th>
@@ -402,80 +420,24 @@
                         <th><i class="fas fa-route"></i> Ruta</th>
                     </tr>
                 </thead>
-
                 <tbody id="tableBody">
-
-                    {% for h in horarios %}
-
-                    <tr>
-
-                        <!-- ORIGEN -->
-                        <td>{{ h.origen.nombre }}</td>
-
-                        <!-- DESTINO -->
-                        <td>{{ h.destino.nombre }}</td>
-
-                        <!-- PRIMER VIAJE -->
-                        <td>
-                            <span class="time-cell">
-                                {{ h.primer_viaje }}
-                            </span>
+                    <tr class="empty-state-row">
+                        <td colspan="9">
+                            <div class="empty-state">
+                                <i class="fas fa-search"></i>
+                                <h3>No hay horarios disponibles</h3>
+                                <p>Selecciona un origen y/o destino para ver los horarios disponibles</p>
+                            </div>
                         </td>
-
-                        <!-- ULTIMO VIAJE -->
-                        <td>
-                            <span class="time-cell">
-                                {{ h.ultimo_viaje }}
-                            </span>
-                        </td>
-
-                        <!-- FRECUENCIA -->
-                        <td>
-                            <span class="frequency-badge">
-                                {{ h.frecuencia }} min
-                            </span>
-                        </td>
-
-                        <!-- PROXIMA SALIDA (JS) -->
-                        <td>
-                            <span class="time-cell">
-                                Calculando...
-                            </span>
-                        </td>
-
-                        <!-- TARIFA -->
-                        <td>
-                            <span class="price-tag">
-                                ${{ h.tarifa }}
-                            </span>
-                        </td>
-
-                        <!-- DESCUENTO -->
-                        <td>
-                            <span class="price-tag" style="background: linear-gradient(135deg,#8b5cf6,#a78bfa);">
-                                ${{ h.descuento }}
-                            </span>
-                        </td>
-
-                        <!-- RUTA -->
-                        <td>
-                            <i class="fas fa-bus"></i>
-                            {{ h.ruta.nombre }}
-                        </td>
-
                     </tr>
-
-                    {% endfor %}
-
                 </tbody>
-
             </table>
         </div>
 
         <!-- DESCUENTOS ESPECIALES -->
         <div class="section-header">
             <h2>Descuentos Especiales</h2>
-            <p>Aprovecha nuestras tarifas preferenciales</p>
+            <p style="color: var(--gris-medio);">Aprovecha nuestras tarifas preferenciales</p>
         </div>
 
         <div class="discounts-container">
@@ -552,8 +514,7 @@
         <!-- INFORMACIÓN ADICIONAL -->
         <div class="note-container" style="background: #dbeafe; border-left-color: var(--azul-secundario);">
             <h4><i class="fas fa-info-circle"></i> Cómo pagar tu viaje</h4>
-            <div
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
                 <div>
                     <h5><i class="fas fa-money-bill-wave" style="color: var(--acento-verde);"></i> Efectivo</h5>
                     <p style="color: var(--gris-medio);">Aceptamos efectivo exacto. Manejamos cambio.</p>
@@ -573,8 +534,7 @@
                 </span>
                 <span class="separator" style="color: rgba(255,255,255,0.8); font-weight: bold;">|</span>
                 <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
-                    <i class="fas fa-map-marker-alt"></i> 72090, Av. 10 Pte. 113, San Miguelito, Heroica Puebla de
-                    Zaragoza, Pue.
+                    <i class="fas fa-map-marker-alt"></i> 72090, Av. 10 Pte. 113, San Miguelito, Heroica Puebla de Zaragoza, Pue.
                 </span>
             </div>
 
@@ -595,16 +555,12 @@
 
     <!-- JavaScript -->
     <script>
-
         document.addEventListener('DOMContentLoaded', function () {
 
             // ===== DATOS =====
             const horarios = JSON.parse(
                 document.getElementById("horarios-data").textContent
             );
-
-            // Variable global para filtrar
-            let filtrados = [...horarios];
 
             // ===== ELEMENTOS DOM =====
             const tableBody = document.getElementById('tableBody');
@@ -626,7 +582,26 @@
                 });
             }
 
+            function mostrarEmptyState() {
+                tableBody.innerHTML = `
+                    <tr class="empty-state-row">
+                        <td colspan="9">
+                            <div class="empty-state">
+                                <i class="fas fa-search"></i>
+                                <h3>No hay horarios disponibles</h3>
+                                <p style="color: #000000;">Selecciona un origen y/o destino para ver los horarios disponibles</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+
             function cargarTabla(datos) {
+                if (!datos || datos.length === 0) {
+                    mostrarEmptyState();
+                    return;
+                }
+
                 tableBody.innerHTML = "";
 
                 datos.forEach(h => {
@@ -655,27 +630,39 @@
             function cargarFiltros(datos) {
                 if (!Array.isArray(datos)) return;
 
-                const origenes = [...new Set(datos.map(d => d.origen))];
-                const destinos = [...new Set(datos.map(d => d.destino))];
+                const origenes = [...new Set(datos.map(d => d.origen).filter(o => o))];
+                const destinos = [...new Set(datos.map(d => d.destino).filter(d => d))];
+
+                // Limpiar selects manteniendo la opción por defecto
+                filterOrigen.innerHTML = '<option value="">Seleccionar origen</option>';
+                filterDestino.innerHTML = '<option value="">Seleccionar destino</option>';
 
                 origenes.forEach(o => {
-                    if (o) filterOrigen.innerHTML += `<option value="${o}">${o}</option>`;
+                    filterOrigen.innerHTML += `<option value="${o}">${o}</option>`;
                 });
 
                 destinos.forEach(d => {
-                    if (d) filterDestino.innerHTML += `<option value="${d}">${d}</option>`;
+                    filterDestino.innerHTML += `<option value="${d}">${d}</option>`;
                 });
             }
 
             function aplicarFiltros() {
-                filtrados = [...horarios];
+                let filtrados = [...horarios];
+                const origenSeleccionado = filterOrigen.value;
+                const destinoSeleccionado = filterDestino.value;
 
-                if (filterOrigen.value !== "all") {
-                    filtrados = filtrados.filter(h => h.origen === filterOrigen.value);
+                // Solo aplicar filtros si hay al menos un filtro seleccionado
+                if (!origenSeleccionado && !destinoSeleccionado) {
+                    mostrarEmptyState();
+                    return;
                 }
 
-                if (filterDestino.value !== "all") {
-                    filtrados = filtrados.filter(h => h.destino === filterDestino.value);
+                if (origenSeleccionado) {
+                    filtrados = filtrados.filter(h => h.origen === origenSeleccionado);
+                }
+
+                if (destinoSeleccionado) {
+                    filtrados = filtrados.filter(h => h.destino === destinoSeleccionado);
                 }
 
                 cargarTabla(filtrados);
@@ -716,9 +703,11 @@
                 day: 'numeric'
             });
 
-            // ===== CARGAR FILTROS Y TABLA =====
+            // ===== CARGAR FILTROS (SOLO OPCIONES, SIN MOSTRAR DATOS) =====
             cargarFiltros(horarios);
-            cargarTabla(filtrados);
+            
+            // Mostrar estado vacío inicial
+            mostrarEmptyState();
 
             // ===== EVENTOS FILTROS =====
             [filterOrigen, filterDestino].forEach(select => {
