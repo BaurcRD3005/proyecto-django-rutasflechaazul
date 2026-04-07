@@ -108,6 +108,7 @@
                 transform: scale(0.7);
                 opacity: 0;
             }
+
             to {
                 transform: scale(1);
                 opacity: 1;
@@ -132,11 +133,23 @@
             padding: 8px 12px;
             cursor: pointer;
             transition: background 0.3s;
+            border-bottom: 1px solid #f0f0f0;
         }
 
         .suggestion-item:hover {
             background: var(--azul-suave);
             color: #1e3a8a;
+        }
+
+        .suggestion-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .suggestion-sense {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 2px;
         }
 
         .stops-table-container {
@@ -198,7 +211,7 @@
             height: 24px;
             border-radius: 50%;
             border: 2px solid white;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
         }
 
         .price-tag {
@@ -280,14 +293,63 @@
             transform: scale(1.05);
         }
 
-        .btn-unit i {
-            margin-right: 5px;
+        .sense-badge {
+            display: inline-block;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-left: 8px;
+            color: #4a5568;
         }
 
-        .table-actions {
+        .sense-badge-origen {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .sense-badge-destino {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
             display: flex;
-            gap: 0.5rem;
             justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            border-radius: var(--radio-borde);
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--azul-primario);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .selected-stop-info {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #6b7280;
         }
     </style>
 </head>
@@ -325,24 +387,37 @@
         <div class="search-zones">
             <h3><i class="fas fa-search"></i> Busca tu zona</h3>
             <div class="search-input-group">
-                <input type="text" class="search-input" id="origenInput" placeholder="Origen (ingresa nombre de parada)">
-                <div id="origenSuggestions" class="suggestions-container"></div>
+                <div style="flex: 1;">
+                    <input type="text" class="search-input" id="origenInput"
+                        placeholder="Origen (ingresa nombre de parada)">
+                    <div id="origenSuggestions" class="suggestions-container"></div>
+                    <div id="origenInfo" class="selected-stop-info"></div>
+                </div>
 
-                <input type="text" class="search-input" id="destinoInput" placeholder="Destino (ingresa nombre de parada)">
-                <div id="destinoSuggestions" class="suggestions-container"></div>
+                <div style="flex: 1;">
+                    <input type="text" class="search-input" id="destinoInput"
+                        placeholder="Destino (ingresa nombre de parada)">
+                    <div id="destinoSuggestions" class="suggestions-container"></div>
+                    <div id="destinoInfo" class="selected-stop-info"></div>
+                </div>
 
-                <button class="btn btn-primary" onclick="buscarRuta()"><i class="fas fa-search"></i> Buscar ruta</button>
-                <button class="btn btn-location" onclick="obtenerUbicacion()"><i class="fas fa-location-arrow"></i> Usar mi ubicación</button>
+                <button class="btn btn-primary" onclick="buscarRuta()"><i class="fas fa-search"></i> Buscar
+                    ruta</button>
+                <button class="btn btn-location" onclick="obtenerUbicacion()"><i class="fas fa-location-arrow"></i> Usar
+                    mi ubicación</button>
             </div>
             <small style="display: block; margin-top: 0.5rem; color: #6b7280;">
-                <i class="fas fa-info-circle"></i> Puedes buscar de dos formas: 
-                <strong>1. Manual</strong> - Escribe el origen y destino | 
-                <strong>2. Ubicación</strong> - Usa tu ubicación actual
+                <i class="fas fa-info-circle"></i> Las paradas tienen un sentido (dirección). Selecciona una parada del
+                menú desplegable para ver su sentido.
             </small>
         </div>
 
-        <div class="coverage-map">
+        <div class="coverage-map" style="position: relative;">
             <div id="map" style="width:100%; height:500px;"></div>
+            <div id="mapLoading" class="loading-overlay" style="display: flex;">
+                <div class="spinner"></div>
+                <div style="margin-left: 10px;">Cargando mapa...</div>
+            </div>
         </div>
 
         <div id="tablaParadas"></div>
@@ -367,7 +442,8 @@
                 </span>
                 <span class="separator" style="color: rgba(255,255,255,0.8); font-weight: bold;">|</span>
                 <span class="footer-info" style="display: flex; align-items: center; gap: 0.3rem;">
-                    <i class="fas fa-map-marker-alt"></i> 72090, Av. 10 Pte. 113, San Miguelito, Heroica Puebla de Zaragoza, Pue.
+                    <i class="fas fa-map-marker-alt"></i> 72090, Av. 10 Pte. 113, San Miguelito, Heroica Puebla de
+                    Zaragoza, Pue.
                 </span>
             </div>
 
@@ -388,6 +464,7 @@
     {{ rutas_json|json_script:"rutas-data" }}
 
     <script>
+        // Variables globales
         let mapaGlobal = null;
         let markersParadas = [];
         let marcadorUbicacion = null;
@@ -396,53 +473,84 @@
         let miUbicacion = null;
         let rutasGlobales = [];
         let horarios = [];
+        let mapaListo = false;
 
-        try {
-            const data = JSON.parse(document.getElementById("horarios-data").textContent);
-            horarios = Array.isArray(data) ? data : Object.values(data);
-        } catch (e) {
-            console.error("Error leyendo horarios:", e);
-            horarios = [];
-        }
+        // Almacenar la parada seleccionada con su sentido
+        let origenSeleccionado = null;
+        let destinoSeleccionado = null;
+
+        // Esperar a que el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function () {
+            // Cargar datos
+            try {
+                const data = JSON.parse(document.getElementById("horarios-data").textContent);
+                horarios = Array.isArray(data) ? data : Object.values(data);
+            } catch (e) {
+                console.error("Error leyendo horarios:", e);
+                horarios = [];
+            }
+
+            try {
+                const rutasElement = document.getElementById('rutas-data');
+                let rutas = JSON.parse(rutasElement.textContent);
+                rutasGlobales = Array.isArray(rutas) ? rutas : (rutas ? Object.values(rutas) : []);
+            } catch (e) {
+                console.error("Error leyendo rutas:", e);
+                rutasGlobales = [];
+            }
+
+            try {
+                const paradasElement = document.getElementById('paradas-data');
+                window.paradasGlobal = JSON.parse(paradasElement.textContent);
+                console.log("Paradas cargadas:", window.paradasGlobal.length);
+            } catch (e) {
+                console.error("Error leyendo paradas:", e);
+                window.paradasGlobal = [];
+            }
+        });
 
         function inicializarMapa() {
             try {
-                const paradasElement = document.getElementById('paradas-data');
-                const rutasElement = document.getElementById('rutas-data');
-                
-                let paradas = JSON.parse(paradasElement.textContent);
-                let rutas = JSON.parse(rutasElement.textContent);
-                
-                rutasGlobales = Array.isArray(rutas) ? rutas : (rutas ? Object.values(rutas) : []);
-                
                 mapaGlobal = new google.maps.Map(document.getElementById('map'), {
                     zoom: 13,
                     center: { lat: 19.3182, lng: -98.2375 }
                 });
 
-                window.paradasGlobal = paradas;
-
-                paradas.forEach(p => {
+                // Crear marcadores para todas las paradas
+                window.paradasGlobal.forEach(p => {
                     if (!p.lat || !p.lng) return;
                     const marker = new google.maps.Marker({
                         position: { lat: Number(p.lat), lng: Number(p.lng) },
                         map: mapaGlobal,
-                        title: p.nombre
+                        title: `${p.nombre} (${p.sentido || 'Sin sentido'})`
                     });
                     markersParadas.push(marker);
                 });
 
-                autocompletar('origenInput', 'origenSuggestions');
-                autocompletar('destinoInput', 'destinoSuggestions');
-                
+                autocompletarConSentido('origenInput', 'origenSuggestions', 'origenInfo', 'origen');
+                autocompletarConSentido('destinoInput', 'destinoSuggestions', 'destinoInfo', 'destino');
+
+                // Ocultar loading
+                const loadingDiv = document.getElementById('mapLoading');
+                if (loadingDiv) loadingDiv.style.display = 'none';
+
+                mapaListo = true;
+                console.log("Mapa inicializado correctamente");
+
             } catch (error) {
                 console.error("Error inicializando mapa:", error);
+                const loadingDiv = document.getElementById('mapLoading');
+                if (loadingDiv) {
+                    loadingDiv.innerHTML = '<div style="color: red;">Error al cargar el mapa. Por favor, recarga la página.</div>';
+                }
             }
         }
 
-        function autocompletar(inputId, suggestionsId) {
+        function autocompletarConSentido(inputId, suggestionsId, infoId, tipo) {
             const input = document.getElementById(inputId);
             const suggestions = document.getElementById(suggestionsId);
+            const infoDiv = document.getElementById(infoId);
+
             if (!input || !suggestions) return;
 
             input.addEventListener('input', function () {
@@ -460,12 +568,34 @@
                 filtradas.slice(0, 8).forEach(p => {
                     const div = document.createElement('div');
                     div.className = 'suggestion-item';
-                    const sentidoTexto = p.sentido && p.sentido !== "Sin sentido" ? p.sentido : "No especificado";
-                    div.innerHTML = `<div><strong>${p.nombre}</strong></div><div style="font-size: 0.85em; color: #666;">Sentido: ${sentidoTexto}</div>`;
+                    const sentidoTexto = p.sentido && p.sentido !== "Sin sentido" ? p.sentido : "Sentido no especificado";
+                    div.innerHTML = `
+                <div class="suggestion-name">${p.nombre}</div>
+                <div class="suggestion-sense"><i class="fas fa-arrow-right"></i> ${sentidoTexto}</div>
+            `;
                     div.addEventListener('click', () => {
                         input.value = p.nombre;
                         suggestions.innerHTML = '';
                         suggestions.style.display = 'none';
+
+                        // 🔥 GUARDAR LA PARADA COMPLETA CON ID
+                        const paradaCompleta = {
+                            id: p.id,
+                            nombre: p.nombre,
+                            lat: p.lat,
+                            lng: p.lng,
+                            sentido: p.sentido
+                        };
+
+                        if (tipo === 'origen') {
+                            origenSeleccionado = paradaCompleta;
+                            infoDiv.innerHTML = `<i class="fas fa-map-marker-alt"></i> Sentido: <strong>${p.sentido || 'No especificado'}</strong>`;
+                            infoDiv.style.color = '#065f46';
+                        } else {
+                            destinoSeleccionado = paradaCompleta;
+                            infoDiv.innerHTML = `<i class="fas fa-flag-checkered"></i> Sentido: <strong>${p.sentido || 'No especificado'}</strong>`;
+                            infoDiv.style.color = '#92400e';
+                        }
                     });
                     suggestions.appendChild(div);
                 });
@@ -480,6 +610,11 @@
         }
 
         function obtenerUbicacion() {
+            if (!mapaListo) {
+                alert("El mapa aún no está listo. Por favor espera un momento.");
+                return;
+            }
+
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     miUbicacion = {
@@ -488,7 +623,7 @@
                     };
 
                     if (marcadorUbicacion) marcadorUbicacion.setMap(null);
-                    
+
                     marcadorUbicacion = new google.maps.Marker({
                         position: miUbicacion,
                         map: mapaGlobal,
@@ -500,6 +635,8 @@
                     });
 
                     document.getElementById('origenInput').value = "📍 Mi ubicación actual";
+                    document.getElementById('origenInfo').innerHTML = `<i class="fas fa-location-dot"></i> Usando tu ubicación actual`;
+                    origenSeleccionado = null;
                     mapaGlobal.setCenter(miUbicacion);
                     mapaGlobal.setZoom(15);
                     alert("✅ Ubicación obtenida. Ahora ingresa tu destino.");
@@ -510,21 +647,24 @@
 
         function encontrarParadaPorNombre(nombre) {
             if (!window.paradasGlobal) return null;
-            return window.paradasGlobal.find(p => 
+            return window.paradasGlobal.find(p =>
                 p.nombre && p.nombre.toLowerCase() === nombre.toLowerCase()
             );
         }
 
-        function encontrarParadaMasCercana(ubicacion) {
+        function encontrarParadaMasCercanaConMismoSentido(ubicacion, sentidoRequerido) {
             if (!window.paradasGlobal || !window.paradasGlobal.length) return { parada: null, distancia: Infinity };
-            
+
             let distanciaMinima = Infinity;
             let paradaCercana = null;
 
             window.paradasGlobal.forEach(parada => {
                 if (!parada.lat || !parada.lng) return;
+                // Filtrar por sentido - SOLO paradas con el mismo sentido
+                if (parada.sentido !== sentidoRequerido) return;
+
                 const distancia = Math.sqrt(
-                    Math.pow(ubicacion.lat - Number(parada.lat), 2) + 
+                    Math.pow(ubicacion.lat - Number(parada.lat), 2) +
                     Math.pow(ubicacion.lng - Number(parada.lng), 2)
                 );
                 if (distancia < distanciaMinima) {
@@ -545,6 +685,13 @@
         }
 
         function mostrarTablaMejorada(rutaInfo, origenParada, destinoParada, paradasRecorridas, infoAdicional) {
+            console.log("Mostrando tabla con:", {
+                rutaInfo: rutaInfo.nombre,
+                origen: origenParada.nombre,
+                destino: destinoParada.nombre,
+                paradas: paradasRecorridas.length
+            });
+
             const horario = horarios.find(h =>
                 h.origen && h.destino &&
                 h.origen.toLowerCase() === origenParada.nombre?.toLowerCase() &&
@@ -573,7 +720,7 @@
                             }
                             salida.setMinutes(salida.getMinutes() + parseInt(horario.frecuencia));
                         }
-                    } catch(e) { proximaSalida = "Error"; }
+                    } catch (e) { proximaSalida = "Error"; }
                 }
             }
 
@@ -581,230 +728,395 @@
             paradasRecorridas.forEach((p, idx) => {
                 const isStart = idx === 0;
                 const isEnd = idx === paradasRecorridas.length - 1;
+                const sentidoDisplay = p.sentido || (window.paradasGlobal.find(pc => pc.nombre === p.nombre)?.sentido) || 'Sin sentido';
                 paradasHTML += `
-                    <tr style="${isStart ? 'background: #e6f7e6;' : isEnd ? 'background: #ffe6e6;' : ''}">
-                        <td style="text-align: center;"><span class="stop-number">${idx + 1}</span></td>
-                        <td><strong>${p.nombre}</strong></td>
-                        <td>${isStart ? '🚩 Origen' : isEnd ? '🏁 Destino' : '🛑 Parada intermedia'}</td>
-                    </tr>
-                `;
+            <tr style="${isStart ? 'background: #e6f7e6;' : isEnd ? 'background: #ffe6e6;' : ''}">
+                <td style="text-align: center;"><span class="stop-number">${idx + 1}</span></td>
+                <td><strong>${p.nombre}</strong> <span class="sense-badge">${sentidoDisplay}</span></td>
+                <td>${isStart ? '🚩 Origen' : isEnd ? '🏁 Destino' : '🛑 Parada intermedia'}</td>
+            </tr>
+        `;
             });
 
             let infoHTML = '';
             if (infoAdicional) {
                 if (infoAdicional.tipo === 'ubicacion') {
                     infoHTML = `
-                        <div class="walk-info">
-                            <i class="fas fa-walking"></i> <strong>Caminata desde tu ubicación:</strong> ${infoAdicional.distancia_text || 'Aproximadamente'} 
-                            (${infoAdicional.duracion_text || 'Calculando...'})
-                        </div>
-                    `;
+                <div class="walk-info">
+                    <i class="fas fa-walking"></i> <strong>Caminata desde tu ubicación:</strong> ${infoAdicional.distancia_text || 'Aproximadamente'} 
+                    (${infoAdicional.duracion_text || 'Calculando...'})
+                </div>
+            `;
                 } else if (infoAdicional.tipo === 'manual') {
                     infoHTML = `
-                        <div class="origen-manual-info">
-                            <i class="fas fa-map-marker-alt"></i> <strong>Origen ingresado manualmente:</strong> ${origenParada.nombre}
-                        </div>
-                    `;
+                <div class="origen-manual-info">
+                    <i class="fas fa-map-marker-alt"></i> <strong>Origen:</strong> ${origenParada.nombre}
+                    <span class="sense-badge sense-badge-origen">${origenParada.sentido || 'Sin sentido'}</span>
+                    <br>
+                    <i class="fas fa-flag-checkered"></i> <strong>Destino:</strong> ${destinoParada.nombre}
+                    <span class="sense-badge sense-badge-destino">${destinoParada.sentido || 'Sin sentido'}</span>
+                </div>
+            `;
                 }
             }
 
-            document.getElementById('tablaParadas').innerHTML = `
-                <div class="stops-table-container">
-                    ${infoHTML}
-                    
-                    <div class="bus-info">
-                        <div class="route-info">
-                            <span class="route-color" style="background: ${rutaInfo.color || '#2563eb'};"></span>
-                            <span class="route-name"><i class="fas fa-bus"></i> ${rutaInfo.nombre || 'Ruta Flecha Azul'}</span>
-                        </div>
-                        <table class="stops-table" style="margin-top: 1rem;">
-                            <thead>
-                                <tr>
-                                    <th style="width: 60px;">#</th>
-                                    <th>Parada</th>
-                                    <th>Tipo</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${paradasHTML}
-                            </tbody>
-                        </table>
-                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: space-between; align-items: center;">
-                            <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-                                <div><i class="fas fa-tag"></i> <strong>Tarifa:</strong> <span class="price-tag">${tarifa}</span></div>
-                                <div><i class="fas fa-clock"></i> <strong>Próxima salida:</strong> <span class="time-cell">${proximaSalida}</span></div>
-                                <div><i class="fas fa-route"></i> <strong>Paradas totales:</strong> ${paradasRecorridas.length}</div>
-                            </div>
-                            <div>
-                                <button class="btn-unit" onclick="abrirModalUnidad()">
-                                    <i class="fas fa-bus"></i> Ver unidad
-                                </button>
-                            </div>
-                        </div>
+            const tablaHTML = `
+        <div class="stops-table-container">
+            ${infoHTML}
+            
+            <div class="bus-info">
+                <div class="route-info">
+                    <span class="route-color" style="background: ${rutaInfo.color || '#2563eb'};"></span>
+                    <span class="route-name"><i class="fas fa-bus"></i> ${rutaInfo.nombre || 'Ruta Flecha Azul'}</span>
+                    <span class="sense-badge"><i class="fas fa-arrow-right"></i> Sentido: ${destinoParada.sentido || 'No especificado'}</span>
+                </div>
+                <table class="stops-table" style="margin-top: 1rem;">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">#</th>
+                            <th>Parada</th>
+                            <th>Tipo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${paradasHTML}
+                    </tbody>
+                </table>
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                        <div><i class="fas fa-tag"></i> <strong>Tarifa:</strong> <span class="price-tag">${tarifa}</span></div>
+                        <div><i class="fas fa-clock"></i> <strong>Próxima salida:</strong> <span class="time-cell">${proximaSalida}</span></div>
+                        <div><i class="fas fa-route"></i> <strong>Paradas totales:</strong> ${paradasRecorridas.length}</div>
+                    </div>
+                    <div>
+                        <button class="btn-unit" onclick="abrirModalUnidad()">
+                            <i class="fas fa-bus"></i> Ver unidad
+                        </button>
                     </div>
                 </div>
-            `;
+            </div>
+        </div>
+    `;
+
+            document.getElementById('tablaParadas').innerHTML = tablaHTML;
+            console.log("✅ Tabla mostrada correctamente");
         }
 
-        function buscarRuta() {
-            const destinoNombre = document.getElementById('destinoInput').value;
+        // ✅ FUNCIÓN PARA VALIDAR RUTA (LA MÁS IMPORTANTE)
+        function esRutaValida(ruta, origenNombre, destinoNombre) {
+            if (!ruta.paradas || !Array.isArray(ruta.paradas)) return false;
+
+            const indexOrigen = ruta.paradas.findIndex(p =>
+                p.nombre.toLowerCase() === origenNombre.toLowerCase()
+            );
+
+            const indexDestino = ruta.paradas.findIndex(p =>
+                p.nombre.toLowerCase() === destinoNombre.toLowerCase()
+            );
+
+            // Si no existe alguna parada
+            if (indexOrigen === -1 || indexDestino === -1) return false;
+
+            // 🔑 REGLA REAL: Origen debe estar ANTES que Destino
+            return indexOrigen < indexDestino;
+        }
+
+        // ✅ BUSCAR TODAS LAS RUTAS VÁLIDAS
+        function obtenerRutasValidas(rutas, origenNombre, destinoNombre) {
+            return rutas.filter(ruta =>
+                esRutaValida(ruta, origenNombre, destinoNombre)
+            );
+        }
+
+        async function buscarRuta() {
+            if (!mapaListo) {
+                alert("El mapa aún no está listo. Por favor espera un momento.");
+                return;
+            }
+
             const origenNombre = document.getElementById('origenInput').value;
-            
+            const destinoNombre = document.getElementById('destinoInput').value;
+
             if (!destinoNombre) {
                 alert("❌ Por favor ingresa un destino");
                 return;
             }
 
-            const paradaDestino = encontrarParadaPorNombre(destinoNombre);
+            // Buscar la parada destino
+            let paradaDestino = destinoSeleccionado;
             if (!paradaDestino) {
-                alert("❌ No se encontró la parada de destino. Verifica el nombre.");
+                paradaDestino = window.paradasGlobal.find(p =>
+                    p.nombre.toLowerCase() === destinoNombre.toLowerCase() ||
+                    p.nombre.toLowerCase().includes(destinoNombre.toLowerCase())
+                );
+            }
+
+            if (!paradaDestino) {
+                alert(`❌ No se encontró la parada de destino: "${destinoNombre}".`);
                 return;
             }
+
+            console.log("Destino seleccionado:", paradaDestino.nombre, "Sentido:", paradaDestino.sentido);
 
             let paradaOrigen = null;
             let usarUbicacion = false;
 
+            // Modo ubicación
             if (origenNombre === "📍 Mi ubicación actual" && miUbicacion) {
                 usarUbicacion = true;
-                const { parada: paradaCercana } = encontrarParadaMasCercana(miUbicacion);
+                const sentidoDestino = paradaDestino.sentido;
+                if (!sentidoDestino || sentidoDestino === "Sin sentido") {
+                    alert("⚠️ El destino no tiene un sentido definido.");
+                    return;
+                }
+
+                const { parada: paradaCercana } = encontrarParadaMasCercanaConMismoSentido(miUbicacion, sentidoDestino);
                 if (!paradaCercana) {
-                    alert("❌ No se encontró una parada cercana a tu ubicación");
+                    alert(`❌ No se encontró una parada cercana con el sentido "${sentidoDestino}".`);
                     return;
                 }
                 paradaOrigen = paradaCercana;
-            } 
+            }
+            // Modo manual
             else if (origenNombre && origenNombre !== "📍 Mi ubicación actual") {
-                paradaOrigen = encontrarParadaPorNombre(origenNombre);
+                paradaOrigen = origenSeleccionado;
                 if (!paradaOrigen) {
-                    alert("❌ No se encontró la parada de origen. Verifica el nombre.");
+                    paradaOrigen = window.paradasGlobal.find(p =>
+                        p.nombre.toLowerCase() === origenNombre.toLowerCase() ||
+                        p.nombre.toLowerCase().includes(origenNombre.toLowerCase())
+                    );
+                }
+
+                if (!paradaOrigen) {
+                    alert(`❌ No se encontró la parada de origen: "${origenNombre}".`);
                     return;
                 }
-            } 
+
+                console.log("Origen seleccionado:", paradaOrigen.nombre, "Sentido:", paradaOrigen.sentido);
+
+                // 🚨 YA NO VALIDAMOS SENTIDOS AQUÍ 🚨
+            }
             else {
                 alert("❌ Por favor ingresa un origen o usa el botón 'Usar mi ubicación'");
                 return;
             }
 
-            let url = "{% url 'buscar_zona' %}?zona=" + encodeURIComponent(destinoNombre);
-            url += "&origen=" + encodeURIComponent(paradaOrigen.nombre);
+            console.log("Buscando ruta desde:", paradaOrigen.nombre, "hasta:", paradaDestino.nombre);
 
-            fetch(url)
-                .then(r => r.ok ? r.json() : r.json().then(err => { throw err; }))
-                .then(data => {
-                    if (data.error) return alert(data.error);
-                    
-                    limpiarMapa();
-                    
-                    let paradasRuta = data.paradas;
-                    const indexOrigen = paradasRuta.findIndex(p => p.nombre === paradaOrigen.nombre);
-                    const indexDestino = paradasRuta.findIndex(p => p.nombre === paradaDestino.nombre);
-                    
-                    if (indexOrigen === -1 || indexDestino === -1) {
-                        alert("❌ No hay una ruta directa que conecte estas paradas");
-                        return;
-                    }
-                    
-                    if (indexOrigen > indexDestino) {
-                        alert("⚠️ La parada de origen está después del destino en esta ruta. Por favor, selecciona otra parada.");
-                        return;
-                    }
-                    
-                    const paradasRecorridas = paradasRuta.slice(indexOrigen, indexDestino + 1);
-                    
-                    const rutaCompleta = rutasGlobales.find(r => r && r.nombre === data.ruta);
-                    let pathCoordenadas = [];
-                    
-                    if (rutaCompleta && rutaCompleta.coordenadas && Array.isArray(rutaCompleta.coordenadas) && rutaCompleta.coordenadas.length > 0) {
-                        const coordenadas = rutaCompleta.coordenadas.map(c => ({ lat: Number(c.lat), lng: Number(c.lng) }));
-                        let startIdx = -1, endIdx = -1;
-                        for (let i = 0; i < coordenadas.length; i++) {
-                            const coord = coordenadas[i];
-                            const distOrigen = Math.hypot(coord.lat - Number(paradaOrigen.lat), coord.lng - Number(paradaOrigen.lng));
-                            const distDestino = Math.hypot(coord.lat - Number(paradaDestino.lat), coord.lng - Number(paradaDestino.lng));
-                            if (distOrigen < 0.0005 && startIdx === -1) startIdx = i;
-                            if (distDestino < 0.0005) endIdx = i;
+            // Construir URL para la petición
+            // En la función buscarRuta(), modifica la construcción de la URL:
+
+            // Construir URL para la petición
+            // Construir URL para la petición
+            let url = "{% url 'buscar_zona' %}";
+
+            // Siempre enviar el destino por ID (mejor)
+            if (paradaDestino.id) {
+                url += "?zona_id=" + paradaDestino.id;
+            } else {
+                url += "?zona=" + encodeURIComponent(paradaDestino.nombre);
+            }
+
+            // Enviar origen por ID si existe, si no por nombre
+            if (paradaOrigen) {
+                if (paradaOrigen.id) {
+                    url += "&origen_id=" + paradaOrigen.id;
+                } else {
+                    url += "&origen=" + encodeURIComponent(paradaOrigen.nombre);
+                }
+            }
+
+            url += "&destino_sentido=" + encodeURIComponent(paradaDestino.sentido);
+
+            if (usarUbicacion && miUbicacion) {
+                url += "&lat=" + miUbicacion.lat + "&lng=" + miUbicacion.lng;
+            }
+
+            try {
+                const tablaDiv = document.getElementById('tablaParadas');
+                tablaDiv.innerHTML = '<div style="text-align: center; padding: 2rem;"><div class="spinner" style="margin: 0 auto;"></div><p>Buscando ruta...</p></div>';
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!response.ok || !data.paradas || data.paradas.length === 0) {
+                    throw new Error(data.error || "No se encontraron rutas");
+                }
+
+                // 🚀 NUEVA LÓGICA: FILTRAR RUTAS VÁLIDAS
+                // IMPORTANTE: El backend debe devolver un ARRAY de rutas
+                // Si devuelve una sola ruta, la convertimos en array
+                let rutasDisponibles = [];
+                if (data.rutas && Array.isArray(data.rutas)) {
+                    rutasDisponibles = data.rutas;
+                } else if (data.paradas) {
+                    // Si el backend solo devuelve una ruta, la envolvemos en un array
+                    rutasDisponibles = [data];
+                } else {
+                    rutasDisponibles = [];
+                }
+
+                // Filtrar solo las rutas válidas (origen ANTES que destino)
+                const rutasValidas = obtenerRutasValidas(
+                    rutasDisponibles,
+                    paradaOrigen.nombre,
+                    paradaDestino.nombre
+                );
+
+                if (rutasValidas.length === 0) {
+                    tablaDiv.innerHTML = `<div class="error-message" style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 1rem; border-radius: 8px;">
+                <i class="fas fa-exclamation-circle"></i> 
+                <strong>No existe ruta directa:</strong> No hay una ruta donde "${paradaOrigen.nombre}" esté antes que "${paradaDestino.nombre}"
+            </div>`;
+                    return;
+                }
+
+                // ✅ Tomamos la primera ruta válida (luego puedes elegir la mejor)
+                // Reemplaza la parte donde procesas la respuesta (después de const data = await response.json())
+
+                // La respuesta ahora es UNA SOLA RUTA (no un array)
+                const rutaElegida = data; // Directamente la ruta
+
+                console.log("✅ Ruta encontrada:", rutaElegida.nombre);
+                console.log(`📊 Paradas en ruta: ${rutaElegida.paradas.length}`);
+
+                limpiarMapa();
+
+                let paradasRuta = rutaElegida.paradas || [];
+                const indexOrigen = paradasRuta.findIndex(p =>
+                    p.nombre.toLowerCase() === paradaOrigen.nombre.toLowerCase()
+                );
+                const indexDestino = paradasRuta.findIndex(p =>
+                    p.nombre.toLowerCase() === paradaDestino.nombre.toLowerCase()
+                );
+
+                if (indexOrigen === -1 || indexDestino === -1) {
+                    throw new Error("Las paradas no están en la ruta");
+                }
+
+                if (indexOrigen >= indexDestino) {
+                    throw new Error("El origen está después del destino");
+                }
+
+                const paradasRecorridas = paradasRuta.slice(indexOrigen, indexDestino + 1);
+
+                // 🔥 DIBUJAR SOLO EL TRAMO DESDE ORIGEN HASTA DESTINO
+                // Usar SOLO las coordenadas de las paradas recorridas (origen → destino)
+                let pathCoordenadas = paradasRecorridas.map(p => ({
+                    lat: Number(p.lat),
+                    lng: Number(p.lng)
+                }));
+
+                // Si la ruta tiene coordenadas personalizadas, filtrar solo el tramo necesario
+                if (rutaElegida.coordenadas && rutaElegida.coordenadas.length > 0) {
+                    // Encontrar índices aproximados en las coordenadas personalizadas
+                    const coordsRuta = rutaElegida.coordenadas;
+                    const origenCoord = pathCoordenadas[0];
+                    const destinoCoord = pathCoordenadas[pathCoordenadas.length - 1];
+
+                    // Encontrar puntos más cercanos en las coordenadas de la ruta
+                    let startIdx = 0;
+                    let endIdx = coordsRuta.length - 1;
+
+                    // Buscar índice más cercano al origen
+                    let minDistStart = Infinity;
+                    for (let i = 0; i < coordsRuta.length; i++) {
+                        const dist = Math.sqrt(
+                            Math.pow(coordsRuta[i].lat - origenCoord.lat, 2) +
+                            Math.pow(coordsRuta[i].lng - origenCoord.lng, 2)
+                        );
+                        if (dist < minDistStart) {
+                            minDistStart = dist;
+                            startIdx = i;
                         }
-                        if (startIdx !== -1 && endIdx !== -1 && startIdx <= endIdx) {
-                            pathCoordenadas = coordenadas.slice(startIdx, endIdx + 1);
-                        } else {
-                            pathCoordenadas = paradasRecorridas.map(p => ({ lat: Number(p.lat), lng: Number(p.lng) }));
+                    }
+
+                    // Buscar índice más cercano al destino
+                    let minDistEnd = Infinity;
+                    for (let i = startIdx; i < coordsRuta.length; i++) {
+                        const dist = Math.sqrt(
+                            Math.pow(coordsRuta[i].lat - destinoCoord.lat, 2) +
+                            Math.pow(coordsRuta[i].lng - destinoCoord.lng, 2)
+                        );
+                        if (dist < minDistEnd) {
+                            minDistEnd = dist;
+                            endIdx = i;
                         }
-                    } else {
-                        pathCoordenadas = paradasRecorridas.map(p => ({ lat: Number(p.lat), lng: Number(p.lng) }));
                     }
-                    
-                    rutaPolyline = new google.maps.Polyline({
-                        path: pathCoordenadas,
-                        strokeColor: data.color || "#2563eb",
-                        strokeWeight: 5,
-                        map: mapaGlobal
-                    });
-                    
-                    paradasRecorridas.forEach(p => {
-                        const marker = new google.maps.Marker({
-                            position: { lat: Number(p.lat), lng: Number(p.lng) },
-                            map: mapaGlobal,
-                            title: p.nombre
-                        });
-                        markersParadas.push(marker);
-                    });
-                    
-                    let infoAdicional = null;
-                    if (usarUbicacion && miUbicacion) {
-                        const directionsService = new google.maps.DirectionsService();
-                        directionsService.route({
-                            origin: miUbicacion,
-                            destination: { lat: Number(paradaOrigen.lat), lng: Number(paradaOrigen.lng) },
-                            travelMode: google.maps.TravelMode.WALKING
-                        }, (result, status) => {
-                            if (status === "OK") {
-                                if (directionsRenderer) directionsRenderer.setMap(null);
-                                directionsRenderer = new google.maps.DirectionsRenderer({
-                                    map: mapaGlobal,
-                                    suppressMarkers: true,
-                                    polylineOptions: {
-                                        strokeColor: "#10b981",
-                                        strokeWeight: 4,
-                                        strokeOpacity: 0.9,
-                                        icons: [{
-                                            icon: {
-                                                path: 'M 0,-1 0,1',
-                                                strokeOpacity: 1,
-                                                scale: 4
-                                            },
-                                            offset: '0',
-                                            repeat: '20px'
-                                        }]
-                                    }
-                                });
-                                directionsRenderer.setDirections(result);
-                                
-                                const leg = result.routes[0].legs[0];
-                                infoAdicional = {
-                                    tipo: 'ubicacion',
-                                    distancia_text: leg.distance.text,
-                                    duracion_text: leg.duration.text
-                                };
-                                mostrarTablaMejorada(data, paradaOrigen, paradaDestino, paradasRecorridas, infoAdicional);
-                            } else {
-                                console.error("Error en ruta a pie:", status);
-                                mostrarTablaMejorada(data, paradaOrigen, paradaDestino, paradasRecorridas, { tipo: 'ubicacion' });
-                            }
-                        });
-                    } else {
-                        infoAdicional = { tipo: 'manual' };
-                        mostrarTablaMejorada(data, paradaOrigen, paradaDestino, paradasRecorridas, infoAdicional);
-                    }
-                    
-                    const bounds = new google.maps.LatLngBounds();
-                    if (usarUbicacion && miUbicacion) bounds.extend(miUbicacion);
-                    pathCoordenadas.forEach(point => bounds.extend(point));
-                    mapaGlobal.fitBounds(bounds);
-                })
-                .catch(error => {
-                    console.error("Error:", error);
-                    alert(error.error || "❌ Error al buscar la ruta");
+
+                    // Usar solo el tramo relevante de las coordenadas personalizadas
+                    pathCoordenadas = coordsRuta.slice(startIdx, endIdx + 1);
+                }
+
+                rutaPolyline = new google.maps.Polyline({
+                    path: pathCoordenadas,
+                    strokeColor: rutaElegida.color || "#2563eb",
+                    strokeWeight: 5,
+                    strokeOpacity: 0.9,
+                    map: mapaGlobal
                 });
+
+                console.log(`📏 Línea dibujada con ${pathCoordenadas.length} puntos (solo tramo origen→destino)`);
+
+                // Limpiar y agregar marcadores
+                markersParadas.forEach(m => m.setMap(null));
+                markersParadas = [];
+
+                paradasRecorridas.forEach(p => {
+                    const marker = new google.maps.Marker({
+                        position: { lat: Number(p.lat), lng: Number(p.lng) },
+                        map: mapaGlobal,
+                        title: `${p.nombre} (${p.sentido || 'Sin sentido'})`
+                    });
+                    markersParadas.push(marker);
+                });
+
+                let infoAdicional = null;
+                if (usarUbicacion && miUbicacion) {
+                    const directionsService = new google.maps.DirectionsService();
+                    directionsService.route({
+                        origin: miUbicacion,
+                        destination: { lat: Number(paradaOrigen.lat), lng: Number(paradaOrigen.lng) },
+                        travelMode: google.maps.TravelMode.WALKING
+                    }, (result, status) => {
+                        if (status === "OK") {
+                            if (directionsRenderer) directionsRenderer.setMap(null);
+                            directionsRenderer = new google.maps.DirectionsRenderer({
+                                map: mapaGlobal,
+                                suppressMarkers: true,
+                                polylineOptions: {
+                                    strokeColor: "#10b981",
+                                    strokeWeight: 4
+                                }
+                            });
+                            directionsRenderer.setDirections(result);
+                            const leg = result.routes[0].legs[0];
+                            infoAdicional = {
+                                tipo: 'ubicacion',
+                                distancia_text: leg.distance.text,
+                                duracion_text: leg.duration.text
+                            };
+                            mostrarTablaMejorada(rutaElegida, paradaOrigen, paradaDestino, paradasRecorridas, infoAdicional);
+                        } else {
+                            mostrarTablaMejorada(rutaElegida, paradaOrigen, paradaDestino, paradasRecorridas, { tipo: 'ubicacion' });
+                        }
+                    });
+                } else {
+                    infoAdicional = { tipo: 'manual' };
+                    mostrarTablaMejorada(rutaElegida, paradaOrigen, paradaDestino, paradasRecorridas, infoAdicional);
+                }
+
+                const bounds = new google.maps.LatLngBounds();
+                if (usarUbicacion && miUbicacion) bounds.extend(miUbicacion);
+                pathCoordenadas.forEach(point => bounds.extend(point));
+                mapaGlobal.fitBounds(bounds);
+
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById('tablaParadas').innerHTML = `<div class="error-message" style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 1rem; border-radius: 8px;">
+            <i class="fas fa-exclamation-circle"></i> <strong>Error:</strong> ${error.message}
+        </div>`;
+            }
         }
 
         function limpiarMapa() {
@@ -812,20 +1124,25 @@
             markersParadas = [];
             if (rutaPolyline) { rutaPolyline.setMap(null); rutaPolyline = null; }
             if (directionsRenderer) { directionsRenderer.setMap(null); directionsRenderer = null; }
-            
+
             if (window.paradasGlobal) {
                 window.paradasGlobal.forEach(p => {
                     if (!p.lat || !p.lng) return;
                     const marker = new google.maps.Marker({
                         position: { lat: Number(p.lat), lng: Number(p.lng) },
                         map: mapaGlobal,
-                        title: p.nombre
+                        title: `${p.nombre} (${p.sentido || 'Sin sentido'})`
                     });
                     markersParadas.push(marker);
                 });
             }
         }
 
+        // Event listeners
+        document.getElementById('destinoInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') buscarRuta(); });
+        document.getElementById('origenInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') buscarRuta(); });
+
+        // Cerrar modal al hacer clic fuera
         const modal = document.getElementById("modalCombi");
         if (modal) {
             const contenido = modal.querySelector(".modal-contenido");
@@ -835,15 +1152,16 @@
                 }
             });
         }
-
-        document.getElementById('destinoInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') buscarRuta(); });
-        document.getElementById('origenInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') buscarRuta(); });
     </script>
 
     <script>
-        function initMap() { inicializarMapa(); }
+        function initMap() {
+            inicializarMapa();
+        }
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places,marker&callback=initMap" async defer></script>
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places,marker&callback=initMap"
+        async defer></script>
 
 </body>
 
