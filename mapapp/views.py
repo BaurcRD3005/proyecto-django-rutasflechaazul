@@ -356,7 +356,7 @@ def buscar_zona(request):
     if not rutas_con_destino:
         return JsonResponse({"error": f"El destino '{parada_destino.nombre}' no está en ninguna ruta"}, status=404)
     
-    # 🔥 Si usamos ubicación, buscar la MEJOR parada origen en CADA ruta
+    # 🔥🔥🔥 CORRECCIÓN IMPORTANTE: Si usamos ubicación, buscar la MEJOR parada origen SOLO en rutas con destino
     if lat and lng and not parada_origen_buscada:
         usar_ubicacion = True
         lat_f, lng_f = float(lat), float(lng)
@@ -368,11 +368,12 @@ def buscar_zona(request):
             paradas_ruta = ruta_info["paradas"]
             idx_destino = ruta_info["idx_destino"]
             
-            # Buscar la parada más cercana que esté ANTES del destino en ESTA ruta
+            # 🔥 CRUCIAL: Buscar la parada más cercana que esté ANTES del destino en ESTA ruta
             mejor_distancia = float('inf')
             mejor_parada = None
             mejor_idx = -1
             
+            # Solo buscar entre paradas que están ANTES del destino en ESTA ruta
             for i in range(idx_destino):  # Solo antes del destino
                 rp = paradas_ruta[i]
                 dist = calcular_distancia(
@@ -398,7 +399,10 @@ def buscar_zona(request):
                 print(f"  Ruta {ruta.nombre}: mejor origen {mejor_parada.nombre} a {mejor_distancia:.3f}km")
         
         if not mejores_opciones:
-            return JsonResponse({"error": "No se encontraron paradas antes del destino en ninguna ruta"}, status=404)
+            # 🔥 Mensaje de error más amigable
+            return JsonResponse({
+                "error": f"No se encontró una parada cercana que esté en la misma ruta que '{parada_destino.nombre}' y antes de ella. Intenta con otra parada destino o selecciona manualmente tu origen."
+            }, status=404)
         
         # Ordenar por distancia y elegir la mejor
         mejores_opciones.sort(key=lambda x: x["distancia"])
@@ -464,16 +468,59 @@ def buscar_zona(request):
             "sentido": rp.parada.sentido or "Sin sentido"
         })
     
-    # Obtener coordenadas de la ruta
+    # Obtener coordenadas de la ruta (solo el tramo origen-destino)
     coordenadas_ruta = parsear_coordenadas(ruta_elegida.coordenadas)
     coordenadas_formateadas = []
-    if coordenadas_ruta:
-        for v in coordenadas_ruta:
-            if isinstance(v, dict) and 'lat' in v and 'lng' in v:
+    
+    if coordenadas_ruta and len(coordenadas_ruta) > 0:
+        # Encontrar puntos más cercanos al origen y destino en las coordenadas personalizadas
+        origen_coord = {"lat": float(parada_origen.lat), "lng": float(parada_origen.lng)}
+        destino_coord = {"lat": float(parada_destino.lat), "lng": float(parada_destino.lng)}
+        
+        start_idx = 0
+        end_idx = len(coordenadas_ruta) - 1
+        
+        # Buscar índice más cercano al origen
+        min_dist_start = float('inf')
+        for i, coord in enumerate(coordenadas_ruta):
+            if isinstance(coord, dict) and 'lat' in coord and 'lng' in coord:
+                dist = calcular_distancia(
+                    origen_coord["lat"], origen_coord["lng"],
+                    float(coord['lat']), float(coord['lng'])
+                )
+                if dist < min_dist_start:
+                    min_dist_start = dist
+                    start_idx = i
+        
+        # Buscar índice más cercano al destino (desde start_idx hasta el final)
+        min_dist_end = float('inf')
+        for i in range(start_idx, len(coordenadas_ruta)):
+            coord = coordenadas_ruta[i]
+            if isinstance(coord, dict) and 'lat' in coord and 'lng' in coord:
+                dist = calcular_distancia(
+                    destino_coord["lat"], destino_coord["lng"],
+                    float(coord['lat']), float(coord['lng'])
+                )
+                if dist < min_dist_end:
+                    min_dist_end = dist
+                    end_idx = i
+        
+        # Usar solo el tramo relevante
+        coordenadas_formateadas = []
+        for i in range(start_idx, end_idx + 1):
+            coord = coordenadas_ruta[i]
+            if isinstance(coord, dict) and 'lat' in coord and 'lng' in coord:
                 coordenadas_formateadas.append({
-                    "lat": float(v['lat']),
-                    "lng": float(v['lng'])
+                    "lat": float(coord['lat']),
+                    "lng": float(coord['lng'])
                 })
+    
+    # Si no hay coordenadas personalizadas, usar las de las paradas
+    if not coordenadas_formateadas:
+        coordenadas_formateadas = [
+            {"lat": float(p["lat"]), "lng": float(p["lng"])}
+            for p in paradas_recorridas
+        ]
     
     print(f"\n✅ RUTA FINAL:")
     print(f"  Ruta: {ruta_elegida.nombre}")
